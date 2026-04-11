@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { DB, searchLocal } from "./db";
 import * as tmdb from "./tmdb";
 import * as store from "./storage";
-import MarketingPlan from "./MarketingPlan";
 
 const T = {
   bg: "#0a0a0f", surface: "#12121a", card: "#16161f", border: "#2a2a3a",
@@ -502,25 +501,8 @@ export default function App() {
           <div style={{ fontSize: 13, color: T.muted }}>{catalog.length} filmes · {watchlists.length} watchlists · {checklists.length} listas</div>
           <div style={{ fontSize: 12, color: T.dim, marginTop: 8 }}>Banco local: {DB.length} filmes curados</div>
         </div>
-        <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginTop: 20 }}>
-          <div style={{ fontSize: 12, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Sobre o Cinapse</div>
-          <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 16, margin: "0 0 16px" }}>
-            Conheça a estratégia de marketing e crescimento do Cinapse.
-          </p>
-          <button onClick={() => setView("marketing")}
-            style={{ padding: "10px 20px", background: T.gold + "22", border: `1px solid ${T.gold}44`, borderRadius: 8, color: T.gold, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Georgia,serif" }}>
-            Ver Plano de Marketing
-          </button>
-        </div>
       </div>
     );
-  }
-
-  // ═══════════════════════════════════════════
-  // MARKETING PLAN
-  // ═══════════════════════════════════════════
-  if (view === "marketing") {
-    return <MarketingPlan onBack={() => setView("settings")} />;
   }
 
   // ═══════════════════════════════════════════
