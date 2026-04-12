@@ -7,8 +7,8 @@ const T = {
 
 const S = {
   card: { padding: 24, background: T.surface, borderRadius: 12, border: `1px solid ${T.border}`, marginBottom: 24 },
-  label: { fontSize: 12, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 16 },
-  body: { fontSize: 14, color: T.muted, lineHeight: 1.8 },
+  label: { fontSize: 15, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 16 },
+  body: { fontSize: 17, color: T.muted, lineHeight: 1.8 },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 14, marginBottom: 8 },
 };
 
@@ -18,14 +18,14 @@ export default function MarketingPlan({ onBack }) {
 
       {/* BACK */}
       <button onClick={onBack}
-        style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 13, marginBottom: 20, padding: 0, fontFamily: "Georgia,serif" }}>
+        style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 16, marginBottom: 20, padding: 0, fontFamily: "inherit" }}>
         ← Voltar
       </button>
 
       {/* ─── HERO ─── */}
       <div style={{ textAlign: "center", marginBottom: 48, paddingBottom: 32, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 36, color: T.gold, letterSpacing: ".12em", fontWeight: 300 }}>CINAPSE</div>
-        <div style={{ fontSize: 16, color: T.muted, letterSpacing: ".08em", marginTop: 8 }}>Plano de Marketing 2026</div>
+        <div style={{ fontSize: 17, color: T.muted, letterSpacing: ".08em", marginTop: 8 }}>Plano de Marketing 2026</div>
         <div style={{ width: 60, height: 2, background: `linear-gradient(90deg,${T.gold},${T.goldDim})`, margin: "20px auto 0", borderRadius: 1 }} />
       </div>
 
@@ -51,9 +51,9 @@ export default function MarketingPlan({ onBack }) {
             { title: "Crítico Casual", color: T.green, desc: "Bloggers e reviewers casuais que buscam uma ferramenta pessoal para tracking e organização de filmes.", traits: "Listas · Notas · Ratings pessoais" },
           ].map(p => (
             <div key={p.title} style={{ ...S.card, marginBottom: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: p.color, marginBottom: 8 }}>{p.title}</div>
-              <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 10 }}>{p.desc}</div>
-              <div style={{ fontSize: 11, color: T.dim, fontStyle: "italic" }}>{p.traits}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: p.color, marginBottom: 8 }}>{p.title}</div>
+              <div style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 10 }}>{p.desc}</div>
+              <div style={{ fontSize: 14, color: T.dim, fontStyle: "italic" }}>{p.traits}</div>
             </div>
           ))}
         </div>
@@ -63,13 +63,13 @@ export default function MarketingPlan({ onBack }) {
       <div style={{ marginBottom: 32 }}>
         <div style={{ ...S.label, marginBottom: 20 }}>Proposta de Valor</div>
         <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, color: T.muted }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16, color: T.muted }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                <th style={{ padding: "14px 16px", textAlign: "left", color: T.dim, fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase" }}>Recurso</th>
-                <th style={{ padding: "14px 12px", textAlign: "center", color: T.gold, fontSize: 11, letterSpacing: ".1em" }}>CINAPSE</th>
-                <th style={{ padding: "14px 12px", textAlign: "center", fontSize: 11, letterSpacing: ".1em" }}>Letterboxd</th>
-                <th style={{ padding: "14px 12px", textAlign: "center", fontSize: 11, letterSpacing: ".1em" }}>IMDb</th>
+                <th style={{ padding: "14px 16px", textAlign: "left", color: T.dim, fontSize: 14, letterSpacing: ".1em", textTransform: "uppercase" }}>Recurso</th>
+                <th style={{ padding: "14px 12px", textAlign: "center", color: T.gold, fontSize: 14, letterSpacing: ".1em" }}>CINAPSE</th>
+                <th style={{ padding: "14px 12px", textAlign: "center", fontSize: 14, letterSpacing: ".1em" }}>Letterboxd</th>
+                <th style={{ padding: "14px 12px", textAlign: "center", fontSize: 14, letterSpacing: ".1em" }}>IMDb</th>
               </tr>
             </thead>
             <tbody>
@@ -109,9 +109,9 @@ export default function MarketingPlan({ onBack }) {
           <div key={c.channel} style={{ ...S.card, display: "flex", gap: 16, alignItems: "flex-start" }}>
             <div style={{ width: 4, minHeight: 60, background: c.color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: c.color, marginBottom: 6 }}>{c.channel}</div>
-              <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 6 }}>{c.strategy}</div>
-              <div style={{ fontSize: 12, color: T.dim, fontStyle: "italic" }}>{c.reach}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: c.color, marginBottom: 6 }}>{c.channel}</div>
+              <div style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 6 }}>{c.strategy}</div>
+              <div style={{ fontSize: 15, color: T.dim, fontStyle: "italic" }}>{c.reach}</div>
             </div>
           </div>
         ))}
@@ -128,10 +128,10 @@ export default function MarketingPlan({ onBack }) {
             { pillar: "Cobertura de Festivais", desc: "Cobertura ao vivo de festivais de cinema com watchlists geradas automaticamente e recomendações em tempo real." },
           ].map((c, i) => (
             <div key={c.pillar} style={{ padding: "14px 0", borderBottom: i < 3 ? `1px solid ${T.border}22` : "none", display: "flex", gap: 14, alignItems: "flex-start" }}>
-              <div style={{ width: 24, height: 24, borderRadius: 6, background: T.goldGlow, color: T.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: T.goldGlow, color: T.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>
               <div>
-                <div style={{ fontSize: 14, color: T.text, fontWeight: 600, marginBottom: 4 }}>{c.pillar}</div>
-                <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>{c.desc}</div>
+                <div style={{ fontSize: 17, color: T.text, fontWeight: 600, marginBottom: 4 }}>{c.pillar}</div>
+                <div style={{ fontSize: 16, color: T.muted, lineHeight: 1.6 }}>{c.desc}</div>
               </div>
             </div>
           ))}
@@ -154,12 +154,12 @@ export default function MarketingPlan({ onBack }) {
             </div>
             <div style={{ ...S.card, flex: 1, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: p.color }}>{p.phase}</div>
-                <div style={{ fontSize: 11, color: T.dim, padding: "3px 10px", background: p.color + "18", borderRadius: 4, border: `1px solid ${p.color}33` }}>{p.period}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: p.color }}>{p.phase}</div>
+                <div style={{ fontSize: 14, color: T.dim, padding: "3px 10px", background: p.color + "18", borderRadius: 4, border: `1px solid ${p.color}33` }}>{p.period}</div>
               </div>
               <ul style={{ margin: 0, paddingLeft: 18, listStyle: "none" }}>
                 {p.items.map(item => (
-                  <li key={item} style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, position: "relative" }}>
+                  <li key={item} style={{ fontSize: 16, color: T.muted, lineHeight: 1.8, position: "relative" }}>
                     <span style={{ position: "absolute", left: -16, color: p.color }}>›</span>
                     {item}
                   </li>
@@ -182,12 +182,12 @@ export default function MarketingPlan({ onBack }) {
           ].map(([v, l, c]) => (
             <div key={l} style={{ background: T.surface, borderRadius: 12, padding: 18, textAlign: "center", border: `1px solid ${T.border}` }}>
               <div style={{ fontSize: 32, fontWeight: 300, color: c }}>{v}</div>
-              <div style={{ fontSize: 10, color: T.muted, letterSpacing: ".15em", textTransform: "uppercase", marginTop: 6 }}>{l}</div>
+              <div style={{ fontSize: 13, color: T.muted, letterSpacing: ".15em", textTransform: "uppercase", marginTop: 6 }}>{l}</div>
             </div>
           ))}
         </div>
         <div style={S.card}>
-          <div style={{ fontSize: 13, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 14 }}>KPIs Detalhados</div>
+          <div style={{ fontSize: 16, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 14 }}>KPIs Detalhados</div>
           {[
             { kpi: "Usuários ativos mensais (MAU)", target: "1.000 em 6 meses", bar: 0.4 },
             { kpi: "Retenção D30", target: "45% após 30 dias", bar: 0.45 },
@@ -197,8 +197,8 @@ export default function MarketingPlan({ onBack }) {
           ].map(k => (
             <div key={k.kpi} style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 13, color: T.text }}>{k.kpi}</span>
-                <span style={{ fontSize: 12, color: T.gold }}>{k.target}</span>
+                <span style={{ fontSize: 16, color: T.text }}>{k.kpi}</span>
+                <span style={{ fontSize: 15, color: T.gold }}>{k.target}</span>
               </div>
               <div style={{ height: 6, background: T.card, borderRadius: 3, overflow: "hidden" }}>
                 <div style={{ width: `${k.bar * 100}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.goldDim})`, borderRadius: 3, transition: "width .8s" }} />
@@ -209,7 +209,7 @@ export default function MarketingPlan({ onBack }) {
       </div>
 
       {/* FOOTER */}
-      <div style={{ textAlign: "center", padding: "24px 0 40px", borderTop: `1px solid ${T.border}`, color: T.dim, fontSize: 12 }}>
+      <div style={{ textAlign: "center", padding: "24px 0 40px", borderTop: `1px solid ${T.border}`, color: T.dim, fontSize: 15 }}>
         CINAPSE © 2026 — Documento interno de estratégia
       </div>
     </div>

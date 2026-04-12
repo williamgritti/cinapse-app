@@ -702,6 +702,13 @@ export default function App() {
   }
 
   // ═══════════════════════════════════════════
+  // MARKETING PLAN
+  // ═══════════════════════════════════════════
+  if (view === "marketing") {
+    return <MarketingPlan onBack={() => setView("settings")} />;
+  }
+
+  // ═══════════════════════════════════════════
   // MAIN CATALOG
   // ═══════════════════════════════════════════
   const hasResults = searchMode === "local" ? localResults.length > 0 : tmdbResults.length > 0;
