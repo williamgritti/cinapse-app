@@ -114,6 +114,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [keyInput, setKeyInput] = useState(tmdb.getApiKey());
   const debounceRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Load
   useEffect(() => {
@@ -129,6 +130,44 @@ export default function App() {
   }, [catalog, watchlists, checklists]);
 
   const flash = (msg, type = "ok") => { setNotif({ msg, type }); setTimeout(() => setNotif(null), 2500); };
+
+  // ─── BACKUP / RESTORE ───
+  const handleExport = () => {
+    const data = { version: 1, exportedAt: new Date().toISOString(), catalog, watchlists, checklists, tmdbApiKey: tmdb.getApiKey() || "" };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cinapse-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    flash("Backup exportado!");
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data || typeof data !== "object" || !Array.isArray(data.catalog)) {
+          flash("Arquivo inválido", "warn"); return;
+        }
+        const hasExisting = catalog.length > 0 || watchlists.length > 0 || checklists.length > 0;
+        if (hasExisting && !window.confirm("Isso vai substituir o catálogo, watchlists, listas e API key atuais. Continuar?")) return;
+        setCatalog(data.catalog || []);
+        setWatchlists(data.watchlists || []);
+        setChecklists(data.checklists || []);
+        if (data.tmdbApiKey) { tmdb.setApiKey(data.tmdbApiKey); setKeyInput(data.tmdbApiKey); }
+        flash(`Importado: ${(data.catalog || []).length} filme${(data.catalog || []).length !== 1 ? "s" : ""}`);
+      } catch (err) {
+        flash("Erro ao ler arquivo: " + err.message, "warn");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   // ─── SEARCH ───
   const doLocalSearch = (q) => {
@@ -675,6 +714,19 @@ export default function App() {
           </div>
           {tmdb.hasApiKey() && <div style={{ marginTop: 10, fontSize: 15, color: T.green }}>✓ API key configurada</div>}
         </div>
+        <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20 }}>
+          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Backup & Sincronização</div>
+          <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
+            Exporte um arquivo JSON com seu catálogo, watchlists, listas e API key. Importe em outro dispositivo (ex: iPhone) para migrar tudo de uma vez.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={handleExport}
+              style={{ padding: "10px 20px", background: T.gold, border: "none", borderRadius: 8, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Exportar JSON</button>
+            <button onClick={() => fileInputRef.current?.click()}
+              style={{ padding: "10px 20px", background: "transparent", border: `1px solid ${T.gold}66`, borderRadius: 8, color: T.gold, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Importar JSON</button>
+            <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} style={{ display: "none" }} />
+          </div>
+        </div>
         <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}` }}>
           <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Dados</div>
           <div style={{ fontSize: 16, color: T.muted }}>{catalog.length} filmes · {watchlists.length} watchlists · {checklists.length} listas</div>
@@ -716,7 +768,7 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 860, margin: "0 auto", padding: "24px 20px" }}>
-      {notif && <div style={{ position: "fixed", top: 20, right: 20, zIndex: 100, padding: "12px 20px", borderRadius: 8, fontSize: 16, fontWeight: 600, background: notif.type === "ok" ? T.green + "dd" : notif.type === "info" ? T.blue + "dd" : T.red + "dd", color: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,.4)", animation: "fadeUp .3s ease" }}>{notif.msg}</div>}
+      {notif && <div style={{ position: "fixed", top: "max(20px, env(safe-area-inset-top))", right: "max(20px, env(safe-area-inset-right))", zIndex: 100, padding: "12px 20px", borderRadius: 8, fontSize: 16, fontWeight: 600, background: notif.type === "ok" ? T.green + "dd" : notif.type === "info" ? T.blue + "dd" : T.red + "dd", color: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,.4)", animation: "fadeUp .3s ease" }}>{notif.msg}</div>}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div>
