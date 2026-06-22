@@ -70,3 +70,79 @@ input, textarea { font-size: 16px; }
     opacity: 1;
   }
 }
+
+/* ─── Layout da página ─── */
+.cinapse-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  /* reserva espaço para a bottom nav fixa no mobile */
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+.cinapse-page.wide { max-width: 860px; }
+
+@media (min-width: 768px) {
+  .cinapse-page { padding-bottom: 32px; }
+}
+
+/* ─── Navegação ─── */
+/* mobile-first: bottom nav visível, top nav oculta */
+.cinapse-nav-top { display: none; }
+
+.cinapse-nav-bottom {
+  display: flex;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 90;
+  background: rgba(13, 13, 19, 0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #22222f;
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.cinapse-tab-bottom { transition: color .2s, transform .1s; }
+.cinapse-tab-bottom:active { transform: scale(0.92); }
+
+@media (min-width: 768px) {
+  .cinapse-nav-bottom { display: none; }
+  .cinapse-nav-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    border-bottom: 1px solid #22222f;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (hover: hover) {
+  .cinapse-tab-top:hover { color: #d4a853 !important; }
+  .cinapse-btn:hover:not(:disabled) { filter: brightness(1.08); }
+}
+.cinapse-btn:active:not(:disabled) { transform: scale(0.97); }
+
+/* Marca CINAPSE no mobile (desktop usa a top nav) */
+.cinapse-brand-mobile { display: flex; }
+@media (min-width: 768px) {
+  .cinapse-brand-mobile { display: none; }
+}
+
+/* ─── Grid do catálogo (responsivo) ─── */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+@media (min-width: 600px) {
+  .catalog-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+}
+@media (min-width: 1024px) {
+  .catalog-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+}
