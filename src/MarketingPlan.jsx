@@ -1,12 +1,8 @@
-const T = {
-  bg: "#0a0a0f", surface: "#12121a", card: "#16161f", border: "#2a2a3a",
-  gold: "#d4a853", goldDim: "#a8843f", goldGlow: "rgba(212,168,83,0.15)",
-  red: "#c44040", green: "#4a9e6a", blue: "#5a7ec4", purple: "#8b6fc0",
-  text: "#e8e4dc", muted: "#8a8696", dim: "#5a5668",
-};
+import { T, FONT_SERIF } from "./ui/theme";
+import { BackLink } from "./ui/primitives";
 
 const S = {
-  card: { padding: 24, background: T.surface, borderRadius: 12, border: `1px solid ${T.border}`, marginBottom: 24 },
+  card: { padding: 24, background: T.surface, borderRadius: 12, border: `1px solid ${T.borderSoft}`, marginBottom: 24 },
   label: { fontSize: 15, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 16 },
   body: { fontSize: 17, color: T.muted, lineHeight: 1.8 },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 14, marginBottom: 8 },
@@ -14,17 +10,14 @@ const S = {
 
 export default function MarketingPlan({ onBack }) {
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px", animation: "fadeUp .5s ease" }}>
+    <div className="cinapse-page" style={{ animation: "fadeUp .5s ease" }}>
 
       {/* BACK */}
-      <button onClick={onBack}
-        style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 16, marginBottom: 20, padding: 0, fontFamily: "inherit" }}>
-        ← Voltar
-      </button>
+      <BackLink onClick={onBack} />
 
       {/* ─── HERO ─── */}
       <div style={{ textAlign: "center", marginBottom: 48, paddingBottom: 32, borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ fontSize: 36, color: T.gold, letterSpacing: ".12em", fontWeight: 300 }}>CINAPSE</div>
+        <div style={{ fontSize: 36, color: T.gold, letterSpacing: ".12em", fontWeight: 300, fontFamily: FONT_SERIF }}>CINAPSE</div>
         <div style={{ fontSize: 17, color: T.muted, letterSpacing: ".08em", marginTop: 8 }}>Plano de Marketing 2026</div>
         <div style={{ width: 60, height: 2, background: `linear-gradient(90deg,${T.gold},${T.goldDim})`, margin: "20px auto 0", borderRadius: 1 }} />
       </div>

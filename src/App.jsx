@@ -3,17 +3,15 @@ import { DB, searchLocal } from "./db";
 import * as tmdb from "./tmdb";
 import * as store from "./storage";
 import MarketingPlan from "./MarketingPlan";
-
-const T = {
-  bg: "#0a0a0f", surface: "#12121a", card: "#16161f", border: "#2a2a3a",
-  gold: "#d4a853", goldDim: "#a8843f", goldGlow: "rgba(212,168,83,0.15)",
-  red: "#c44040", green: "#4a9e6a", blue: "#5a7ec4", purple: "#8b6fc0",
-  text: "#e8e4dc", muted: "#8a8696", dim: "#5a5668",
-};
+import { T, SP, R, FS, FW, SH, FONT_SERIF } from "./ui/theme";
+import { cardStyle } from "./ui/styles";
+import {
+  Stars, Poster, Spinner, Button, Btn, Card, Input, Textarea, Badge, Pill,
+  SectionLabel, ProgressBar, EmptyState, StatCard, ServiceChip, BackLink, Notif,
+} from "./ui/primitives";
+import Nav from "./ui/Nav";
 
 const TAGS = ["Cinapse","Novo Extremismo Francês","Body Horror","Slow Burn","Arthouse","Asiático Extremo","Psicológico","Exploitation","Folk Horror","Giallo","Transgressor","Festival","Cult","Clássico","Obra-prima"];
-const svcColors = { sub: T.green, rent: T.blue, buy: T.purple, free: T.gold };
-const svcLabels = { sub: "Assinatura", rent: "Aluguel", buy: "Compra", free: "Grátis" };
 const CURATED_WATCHLISTS = [
   { name: "Ari Aster", desc: "O mestre do terror elevado — slow burn, luto e rituais", icon: "🌸",
     match: m => m.director === "Ari Aster" },
@@ -35,45 +33,8 @@ const CURATED_WATCHLISTS = [
     match: m => (m.genres || []).some(g => /psicol/i.test(g)) || ["Cisne Negro","Requiem for a Dream","Clube da Luta","Donnie Darko","Memento","Shutter Island","Garota Exemplar","O Farol","Mulholland Drive"].some(t => m.title?.includes(t)) },
 ];
 
-
-// ─── COMPONENTS ───
-
-function Stars({ n, onRate, size = 18 }) {
-  const [h, setH] = useState(0);
-  return (
-    <div style={{ display: "flex", gap: 2, cursor: onRate ? "pointer" : "default" }}>
-      {[1,2,3,4,5].map(i => (
-        <svg key={i} width={size} height={size} viewBox="0 0 24 24"
-          onMouseEnter={() => onRate && setH(i)} onMouseLeave={() => onRate && setH(0)}
-          onClick={e => { e.stopPropagation(); onRate?.(i === n ? 0 : i); }}
-          style={{ transition: "transform .2s", transform: (h >= i || (!h && n >= i)) ? "scale(1.15)" : "scale(1)" }}>
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-            fill={(h >= i || (!h && n >= i)) ? T.gold : T.border} style={{ transition: "fill .2s" }} />
-        </svg>
-      ))}
-    </div>
-  );
-}
-
-function Poster({ path, size = 150 }) {
-  if (!path) return <div style={{ width: size, height: size * 1.5, background: T.surface, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, opacity: .3, flexShrink: 0 }}>🎬</div>;
-  return <img src={tmdb.posterUrl(path)} alt="" style={{ width: size, height: size * 1.5, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} onError={e => { e.target.style.display = "none"; }} />;
-}
-
-function Spinner({ text }) {
-  return (
-    <div style={{ textAlign: "center", padding: 36 }}>
-      <div style={{ display: "inline-block", width: 28, height: 28, border: `3px solid ${T.border}`, borderTopColor: T.gold, borderRadius: "50%", animation: "spin .8s linear infinite" }} />
-      {text && <div style={{ marginTop: 10, fontSize: 16, color: T.muted }}>{text}</div>}
-    </div>
-  );
-}
-
-const Btn = ({ children, active, color, onClick, disabled, style: s }) => (
-  <button onClick={onClick} disabled={disabled} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: disabled ? "default" : "pointer", border: `1px solid ${active ? (color || T.gold) + "66" : T.border}`, background: active ? (color || T.gold) + "18" : "transparent", color: active ? (color || T.gold) : T.muted, transition: "all .25s", opacity: disabled ? .5 : 1, ...s }}>{children}</button>
-);
-
-const IS = { width: "100%", padding: "10px 14px", background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 17, outline: "none", boxSizing: "border-box", marginBottom: 8, fontFamily: "inherit" };
+// Estilo de <select> consistente com os tokens
+const selectStyle = { padding: "7px 12px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: R.md, color: T.muted, fontSize: FS.sm, outline: "none", fontFamily: "inherit", cursor: "pointer" };
 
 // ─── MAIN APP ───
 
@@ -111,7 +72,6 @@ export default function App() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [manTitle, setManTitle] = useState(""); const [manYear, setManYear] = useState("");
   const [manDirector, setManDirector] = useState(""); const [manGenres, setManGenres] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
   const [keyInput, setKeyInput] = useState(tmdb.getApiKey());
   const debounceRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -250,7 +210,6 @@ export default function App() {
     setStreamLoading(false);
   };
 
-
   // ─── PREVIEW (search result detail) ───
   const previewLocal = (m) => {
     setPreview({ ...m, _source: "local" });
@@ -297,7 +256,6 @@ export default function App() {
   const toggleCheckItem = (clId, itemId) => { setChecklists(prev => prev.map(c => c.id === clId ? { ...c, items: c.items.map(i => i.id === itemId ? { ...i, done: !i.done } : i) } : c)); };
   const removeCheckItem = (clId, itemId) => { setChecklists(prev => prev.map(c => c.id === clId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c)); };
 
-
   // ─── CURATED WATCHLISTS ───
   const createCuratedWatchlist = (cw) => {
     if (watchlists.some(w => w.name === cw.name)) { flash("Watchlist já existe!", "warn"); return; }
@@ -341,649 +299,558 @@ export default function App() {
 
   const resetView = () => { setSelected(null); setSelWatchlist(null); setSelChecklist(null); setLocalResults([]); setTmdbResults([]); setQuery(""); setSearchError(""); setStreaming(null); setShowWlPicker(null); setPreview(null); setPreviewLoading(false); setShowAllLocal(false); setLocalSort("title"); };
 
-  // ─── TAB BAR ───
-  const TabBar = () => (
-    <div style={{ display: "flex", gap: 6, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 12, flexWrap: "wrap" }}>
-      {[["main", "Catálogo"], ["watchlists", "Watchlists"], ["checklists", "Listas"], ["stats", "Stats"], ["settings", "⚙"]].map(([v, l]) => (
-        <button key={v} onClick={() => { setView(v); resetView(); }}
-          style={{ padding: "8px 16px", borderRadius: 6, fontSize: 15, fontWeight: 600, cursor: "pointer", border: "none", background: view === v ? T.goldGlow : "transparent", color: view === v ? T.gold : T.muted, transition: "all .25s" }}>{l}</button>
-      ))}
+  const go = (v) => { setView(v); resetView(); };
+
+  // Bloco "Onde Assistir" reutilizado por preview e detail
+  const StreamingPanel = ({ m, fetchId, fallback }) => (
+    <div style={{ marginTop: SP["3xl"] - 4, padding: SP.lg, background: T.surface, borderRadius: R.lg, border: `1px solid ${T.borderSoft}`, boxShadow: SH.sm }}>
+      <SectionLabel style={{ marginBottom: SP.md }}
+        action={!streaming && !streamLoading && fetchId != null && !(m.streaming?.length > 0) && (
+          <Button variant="outline" color={T.gold} active size="sm" onClick={() => loadStreaming(fetchId)}>Buscar no TMDb</Button>
+        )}>Onde Assistir (Brasil)</SectionLabel>
+      {m.streaming?.length > 0 && (
+        <div style={{ display: "flex", gap: SP.sm, flexWrap: "wrap" }}>
+          {m.streaming.map((s, i) => <ServiceChip key={i} service={s} />)}
+        </div>
+      )}
+      {streamLoading && <Spinner text="Buscando..." />}
+      {streaming && !m.streaming?.length && (
+        streaming.services?.length > 0 ? (
+          <div style={{ display: "flex", gap: SP.sm, flexWrap: "wrap" }}>
+            {streaming.services.map((s, i) => <ServiceChip key={i} service={s} />)}
+          </div>
+        ) : <div style={{ fontSize: FS.base, color: T.dim, fontStyle: "italic" }}>{streaming.note || "Não encontrado"}</div>
+      )}
+      {!m.streaming?.length && !streaming && !streamLoading && fallback}
+    </div>
+  );
+
+  // Cabeçalho (pôster + metadados) reutilizado por preview e detail
+  const MovieHero = ({ m, posterSize }) => (
+    <div style={{ display: "flex", gap: SP["3xl"] - 4, flexWrap: "wrap" }}>
+      {m.poster_path && <Poster path={m.poster_path} size={posterSize} />}
+      <div style={{ flex: 1, minWidth: 260 }}>
+        <h1 style={{ fontSize: FS["2xl"] + 4, fontWeight: FW.regular, margin: "0 0 4px", fontFamily: FONT_SERIF, letterSpacing: ".01em" }}>{m.title}</h1>
+        {m.original_title && m.original_title !== m.title && <div style={{ fontSize: FS.md, color: T.muted, fontStyle: "italic" }}>{m.original_title}</div>}
+        <div style={{ display: "flex", gap: SP.lg, marginTop: SP.md - 2, fontSize: FS.md, color: T.muted, flexWrap: "wrap" }}>
+          {m.year && <span>{m.year}</span>}
+          {m.runtime > 0 && <span>{m.runtime} min</span>}
+          {m.director && <span style={{ color: T.gold }}>{m.director}</span>}
+          {m.rating > 0 && <span>★ {Number(m.rating).toFixed(1)}</span>}
+        </div>
+        <div style={{ display: "flex", gap: SP.sm - 2, flexWrap: "wrap", marginTop: SP.md }}>
+          {(m.genres || []).map(g => <Pill key={g}>{g}</Pill>)}
+        </div>
+        {m.overview && <p style={{ fontSize: FS.lg, lineHeight: 1.7, color: T.muted, marginTop: SP.xl }}>{m.overview}</p>}
+        {m.cast?.length > 0 && <div style={{ marginTop: SP.md + 2, fontSize: FS.base, color: T.dim }}>Elenco: {m.cast.slice(0, 8).join(", ")}</div>}
+      </div>
     </div>
   );
 
   // ═══════════════════════════════════════════
-  // SEARCH PREVIEW
+  // RENDER DE CADA VIEW
   // ═══════════════════════════════════════════
-  if (preview) {
-    const m = preview;
-    const inCat = catalog.some(c => `${c.title}-${c.year}` === `${m.title}-${m.year}`);
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px", animation: "fadeUp .4s ease" }}>
-        <button onClick={() => { setPreview(null); setStreaming(null); }}
-          style={{ background: "none", border: "none", color: T.muted, fontSize: 17, cursor: "pointer", padding: 0, marginBottom: 24 }}>← Voltar aos resultados</button>
+  const renderView = () => {
 
-        <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-          {m.poster_path && <Poster path={m.poster_path} size={220} />}
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 400, margin: "0 0 4px" }}>{m.title}</h1>
-            {m.original_title && m.original_title !== m.title && <div style={{ fontSize: 17, color: T.muted, fontStyle: "italic" }}>{m.original_title}</div>}
-            <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 17, color: T.muted, flexWrap: "wrap" }}>
-              {m.year && <span>{m.year}</span>}
-              {m.runtime > 0 && <span>{m.runtime} min</span>}
-              {m.director && <span style={{ color: T.gold }}>{m.director}</span>}
-              {m.rating > 0 && <span>★ {Number(m.rating).toFixed(1)}</span>}
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
-              {(m.genres || []).map(g => <span key={g} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 14, fontWeight: 600, background: T.gold + "22", border: `1px solid ${T.gold}66`, color: T.gold }}>{g}</span>)}
-            </div>
-            {m.overview && <p style={{ fontSize: 17, lineHeight: 1.7, color: T.muted, marginTop: 20 }}>{m.overview}</p>}
-            {m.cast?.length > 0 && <div style={{ marginTop: 14, fontSize: 16, color: T.dim }}>Elenco: {m.cast.slice(0, 5).join(", ")}</div>}
+    // ── SEARCH PREVIEW ──
+    if (preview) {
+      const m = preview;
+      const inCat = catalog.some(c => `${c.title}-${c.year}` === `${m.title}-${m.year}`);
+      return (
+        <div style={{ animation: "fadeUp .4s ease" }}>
+          <BackLink onClick={() => { setPreview(null); setStreaming(null); }} label="← Voltar aos resultados" />
+          <MovieHero m={m} posterSize={220} />
+          <StreamingPanel m={m} fetchId={m._rawTmdbId ?? null}
+            fallback={m._source === "local" && <div style={{ fontSize: FS.base, color: T.dim, fontStyle: "italic" }}>Busque no TMDb para ver streaming</div>} />
+          <div style={{ marginTop: SP["2xl"], textAlign: "center" }}>
+            <Button variant={inCat ? "outline" : "solid"} color={inCat ? T.green : T.gold} active={inCat} size="lg" disabled={inCat} onClick={addFromPreview}>
+              {inCat ? "✓ Já no catálogo" : "Adicionar ao Catálogo"}
+            </Button>
           </div>
         </div>
+      );
+    }
 
-        {/* STREAMING */}
-        <div style={{ marginTop: 28, padding: 18, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase" }}>Onde Assistir (Brasil)</span>
-            {!streaming && !streamLoading && m._rawTmdbId && (
-              <button onClick={() => loadStreaming(m._rawTmdbId)} style={{ background: T.gold + "22", border: `1px solid ${T.gold}44`, borderRadius: 6, color: T.gold, fontSize: 14, fontWeight: 600, padding: "5px 12px", cursor: "pointer" }}>Buscar no TMDb</button>
+    // ── DETAIL ──
+    if (view === "detail" && selected) {
+      const m = catalog.find(c => c.id === selected.id) || selected;
+      return (
+        <div style={{ animation: "fadeUp .5s ease" }}>
+          <BackLink onClick={() => { setView("main"); setSelected(null); setEditing(false); setStreaming(null); setShowWlPicker(null); }} />
+          <MovieHero m={m} posterSize={200} />
+          <StreamingPanel m={m} fetchId={m.id < 1e12 ? m.id : null}
+            fallback={m.id >= 1e12 && <div style={{ fontSize: FS.base, color: T.dim, fontStyle: "italic" }}>Adicionado manualmente — sem dados de streaming</div>} />
+
+          {/* WATCHLIST PICKER */}
+          <div style={{ marginTop: SP.lg, position: "relative" }}>
+            <Button variant="outline" color={T.purple} active size="sm" onClick={() => setShowWlPicker(showWlPicker ? null : m.id)}>+ Watchlist</Button>
+            {showWlPicker === m.id && (
+              <div style={{ position: "absolute", top: 40, left: 0, ...cardStyle, background: T.surface, padding: SP.sm, zIndex: 10, minWidth: 220, animation: "fadeUp .2s ease", boxShadow: SH.md }}>
+                {watchlists.length > 0 ? watchlists.map(wl => (
+                  <div key={wl.id} onClick={() => addToWatchlist(wl.id, m.id)} style={{ padding: "8px 12px", borderRadius: R.sm, cursor: "pointer", fontSize: FS.base, color: T.text, transition: "background .15s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = T.card} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    {wl.name} <span style={{ color: T.dim, fontSize: FS.sm }}>({wl.movieIds.length})</span>
+                  </div>
+                )) : <div style={{ padding: 10, fontSize: FS.sm, color: T.dim }}>Crie na aba Watchlists</div>}
+              </div>
             )}
           </div>
-          {m.streaming?.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {m.streaming.map((s, i) => <div key={i} style={{ padding: "8px 14px", borderRadius: 8, background: (svcColors[s.type] || T.blue) + "18", border: `1px solid ${(svcColors[s.type] || T.blue)}44` }}>
-                <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{s.name}</span><br />
-                <span style={{ fontSize: 13, color: svcColors[s.type] || T.muted }}>{svcLabels[s.type] || s.type}</span>
-              </div>)}
+
+          {/* CATALOG FIELDS */}
+          <div style={{ marginTop: SP["3xl"] - 4, borderTop: `1px solid ${T.borderSoft}`, paddingTop: SP["2xl"] }}>
+            <div style={{ display: "flex", gap: SP.sm, marginBottom: SP.xl, flexWrap: "wrap" }}>
+              {[["quero_ver", "Quero Ver", T.blue], ["assistido", "Assistido", T.green], ["abandonado", "Abandonado", T.red]].map(([s, l, c]) => (
+                <Btn key={s} active={m.status === s} color={c} onClick={() => update(m.id, { status: s })}>{l}</Btn>
+              ))}
             </div>
-          )}
-          {streamLoading && <Spinner text="Buscando..." />}
-          {streaming && !m.streaming?.length && (
-            streaming.services?.length > 0 ? (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {streaming.services.map((s, i) => <div key={i} style={{ padding: "8px 14px", borderRadius: 8, background: (svcColors[s.type] || T.blue) + "18", border: `1px solid ${(svcColors[s.type] || T.blue)}44` }}>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{s.name}</span><br />
-                  <span style={{ fontSize: 13, color: svcColors[s.type] || T.muted }}>{svcLabels[s.type] || s.type}</span>
-                </div>)}
+            <div style={{ marginBottom: SP.xl }}>
+              <SectionLabel style={{ marginBottom: SP.sm - 2 }}>Minha Nota</SectionLabel>
+              <Stars n={m.myRating} onRate={r => update(m.id, { myRating: r })} size={26} />
+            </div>
+            <div style={{ marginBottom: SP.xl }}>
+              <SectionLabel style={{ marginBottom: SP.sm }}>Tags</SectionLabel>
+              <div style={{ display: "flex", gap: SP.sm - 2, flexWrap: "wrap" }}>
+                {TAGS.map(t => <Pill key={t} clickable active={(m.tags || []).includes(t)} onClick={() => toggleTag(m.id, t)}>{t}</Pill>)}
               </div>
-            ) : <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>{streaming.note || "Não encontrado"}</div>
-          )}
-          {!m.streaming?.length && !streaming && !streamLoading && m._source === "local" && <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>Busque no TMDb para ver streaming</div>}
-        </div>
-
-        {/* ADD BUTTON */}
-        <div style={{ marginTop: 24, textAlign: "center" }}>
-          <button onClick={addFromPreview} disabled={inCat}
-            style={{ padding: "14px 40px", borderRadius: 10, fontSize: 18, fontWeight: 700, cursor: inCat ? "default" : "pointer",
-              background: inCat ? T.green + "22" : T.gold, border: inCat ? `1px solid ${T.green}44` : "none",
-              color: inCat ? T.green : T.bg, transition: "all .3s", opacity: inCat ? .8 : 1 }}>
-            {inCat ? "✓ Já no catálogo" : "Adicionar ao Catálogo"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════
-  // DETAIL VIEW
-  // ═══════════════════════════════════════════
-  if (view === "detail" && selected) {
-    const m = catalog.find(c => c.id === selected.id) || selected;
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px", animation: "fadeUp .5s ease" }}>
-        <button onClick={() => { setView("main"); setSelected(null); setEditing(false); setStreaming(null); setShowWlPicker(null); }}
-          style={{ background: "none", border: "none", color: T.muted, fontSize: 17, cursor: "pointer", padding: 0, marginBottom: 24 }}>← Voltar</button>
-
-        <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-          {m.poster_path && <Poster path={m.poster_path} size={200} />}
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 400, margin: "0 0 4px" }}>{m.title}</h1>
-            {m.original_title && m.original_title !== m.title && <div style={{ fontSize: 17, color: T.muted, fontStyle: "italic" }}>{m.original_title}</div>}
-            <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 17, color: T.muted, flexWrap: "wrap" }}>
-              {m.year && <span>{m.year}</span>}
-              {m.runtime > 0 && <span>{m.runtime} min</span>}
-              {m.director && <span style={{ color: T.gold }}>{m.director}</span>}
-              {m.rating > 0 && <span>★ {Number(m.rating).toFixed(1)}</span>}
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
-              {(m.genres || []).map(g => <span key={g} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 14, fontWeight: 600, background: T.gold + "22", border: `1px solid ${T.gold}66`, color: T.gold }}>{g}</span>)}
+            <div style={{ marginBottom: SP.xl }}>
+              <SectionLabel style={{ marginBottom: SP.sm }}
+                action={<button onClick={() => { if (editing) update(m.id, { notes: notesDraft }); else setNotesDraft(m.notes || ""); setEditing(!editing); }}
+                  style={{ background: "none", border: "none", color: T.gold, fontSize: FS.sm, cursor: "pointer", fontFamily: "inherit" }}>{editing ? "Salvar" : m.notes ? "Editar" : "Adicionar"}</button>}>Anotações</SectionLabel>
+              {editing ? <Textarea value={notesDraft} onChange={e => setNotesDraft(e.target.value)} placeholder="Ideias pro Cinapse..." />
+                : m.notes ? <div style={{ fontSize: FS.md, color: T.muted, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{m.notes}</div>
+                : <div style={{ fontSize: FS.base, color: T.dim, fontStyle: "italic" }}>Nenhuma anotação</div>}
             </div>
-            {m.overview && <p style={{ fontSize: 18, lineHeight: 1.7, color: T.muted, marginTop: 20 }}>{m.overview}</p>}
-            {m.cast?.length > 0 && <div style={{ marginTop: 14, fontSize: 16, color: T.dim }}>Elenco: {m.cast.join(", ")}</div>}
+            <Button variant="danger" size="sm" onClick={() => remove(m.id)} style={{ opacity: .7 }}>Remover do catálogo</Button>
           </div>
         </div>
+      );
+    }
 
-        {/* STREAMING */}
-        <div style={{ marginTop: 28, padding: 18, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase" }}>Onde Assistir (Brasil)</span>
-            {m.streaming?.length > 0 ? null : !streaming && !streamLoading && m.id < 1e12 && (
-              <button onClick={() => loadStreaming(m.id)} style={{ background: T.gold + "22", border: `1px solid ${T.gold}44`, borderRadius: 6, color: T.gold, fontSize: 14, fontWeight: 600, padding: "5px 12px", cursor: "pointer" }}>Buscar no TMDb</button>
-            )}
-          </div>
-          {/* Embedded streaming from DB */}
-          {m.streaming?.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {m.streaming.map((s, i) => <div key={i} style={{ padding: "8px 14px", borderRadius: 8, background: (svcColors[s.type] || T.blue) + "18", border: `1px solid ${(svcColors[s.type] || T.blue)}44` }}>
-                <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{s.name}</span><br />
-                <span style={{ fontSize: 13, color: svcColors[s.type] || T.muted }}>{svcLabels[s.type] || s.type}</span>
-              </div>)}
-            </div>
-          )}
-          {/* TMDb streaming fetch */}
-          {streamLoading && <Spinner text="Buscando..." />}
-          {streaming && !m.streaming?.length && (
-            streaming.services?.length > 0 ? (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {streaming.services.map((s, i) => <div key={i} style={{ padding: "8px 14px", borderRadius: 8, background: (svcColors[s.type] || T.blue) + "18", border: `1px solid ${(svcColors[s.type] || T.blue)}44` }}>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{s.name}</span><br />
-                  <span style={{ fontSize: 13, color: svcColors[s.type] || T.muted }}>{svcLabels[s.type] || s.type}</span>
-                </div>)}
-              </div>
-            ) : <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>{streaming.note || "Não encontrado"}</div>
-          )}
-          {!m.streaming?.length && !streaming && !streamLoading && m.id >= 1e12 && <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>Adicionado manualmente — sem dados de streaming</div>}
-        </div>
-
-        {/* WATCHLIST PICKER */}
-        <div style={{ marginTop: 16, position: "relative" }}>
-          <button onClick={() => setShowWlPicker(showWlPicker ? null : m.id)} style={{ background: T.purple + "18", border: `1px solid ${T.purple}44`, borderRadius: 6, color: T.purple, fontSize: 14, fontWeight: 600, padding: "6px 14px", cursor: "pointer" }}>+ Watchlist</button>
-          {showWlPicker === m.id && (
-            <div style={{ position: "absolute", top: 36, left: 0, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 8, zIndex: 10, minWidth: 220, animation: "fadeUp .2s ease", boxShadow: "0 8px 24px rgba(0,0,0,.5)" }}>
-              {watchlists.length > 0 ? watchlists.map(wl => (
-                <div key={wl.id} onClick={() => addToWatchlist(wl.id, m.id)} style={{ padding: "8px 12px", borderRadius: 6, cursor: "pointer", fontSize: 16, color: T.text, transition: "background .15s" }}
-                  onMouseEnter={e => e.target.style.background = T.card} onMouseLeave={e => e.target.style.background = "transparent"}>
-                  {wl.name} <span style={{ color: T.dim, fontSize: 14 }}>({wl.movieIds.length})</span>
+    // ── WATCHLISTS ──
+    if (view === "watchlists") {
+      if (selWatchlist) {
+        const wl = watchlists.find(w => w.id === selWatchlist.id);
+        if (!wl) { setSelWatchlist(null); return null; }
+        const movies = wl.movieIds.map(id => catalog.find(c => c.id === id)).filter(Boolean);
+        const watched = movies.filter(m => m.status === "assistido").length;
+        return (
+          <div>
+            <BackLink onClick={() => setSelWatchlist(null)} style={{ marginBottom: SP.xl }} />
+            <h2 style={{ fontSize: FS.h2, fontWeight: FW.regular, color: T.gold, margin: "0 0 4px", fontFamily: FONT_SERIF }}>{wl.name}</h2>
+            {wl.desc && <div style={{ fontSize: FS.base, color: T.muted, marginBottom: SP.sm }}>{wl.desc}</div>}
+            {movies.length > 0 && <div style={{ display: "flex", gap: SP.md, alignItems: "center", marginBottom: SP.xl }}><span style={{ fontSize: FS.sm, color: T.muted }}>{watched}/{movies.length} assistidos</span><ProgressBar value={watched} max={movies.length} maxWidth={160} /></div>}
+            {movies.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.dim }}>Adicione filmes pela ficha do catálogo.</div>}
+            {movies.map((m, i) => (
+              <div key={m.id} style={{ display: "flex", gap: SP.md + 2, padding: "12px 16px", ...cardStyle, marginBottom: SP.sm, animation: `fadeUp .3s ease ${i * .04}s both`, alignItems: "center" }}>
+                <div style={{ flex: 1, cursor: "pointer", minWidth: 0 }} onClick={() => { setSelected(m); setView("detail"); }}>
+                  <div style={{ fontSize: FS.lg, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({m.year})</span></div>
+                  <div style={{ fontSize: FS.sm, color: T.muted, marginTop: 2 }}>{m.director}</div>
                 </div>
-              )) : <div style={{ padding: 10, fontSize: 15, color: T.dim }}>Crie na aba Watchlists</div>}
-            </div>
-          )}
-        </div>
-
-        {/* CATALOG FIELDS */}
-        <div style={{ marginTop: 28, borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-            {[["quero_ver", "Quero Ver", T.blue], ["assistido", "Assistido", T.green], ["abandonado", "Abandonado", T.red]].map(([s, l, c]) => (
-              <Btn key={s} active={m.status === s} color={c} onClick={() => update(m.id, { status: s })}>{l}</Btn>
+                <Badge color={m.status === "assistido" ? T.green : T.blue}>{m.status === "assistido" ? "VISTO" : "LISTA"}</Badge>
+                <button onClick={() => removeFromWatchlist(wl.id, m.id)} style={{ background: "none", border: "none", color: T.red, fontSize: FS.base, cursor: "pointer", opacity: .4 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = .4}>×</button>
+              </div>
             ))}
           </div>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 15, color: T.dim, marginBottom: 6, letterSpacing: ".1em", textTransform: "uppercase" }}>Minha Nota</div>
-            <Stars n={m.myRating} onRate={r => update(m.id, { myRating: r })} size={24} />
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 15, color: T.dim, marginBottom: 8, letterSpacing: ".1em", textTransform: "uppercase" }}>Tags</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {TAGS.map(t => <span key={t} onClick={() => toggleTag(m.id, t)} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: "pointer", background: (m.tags || []).includes(t) ? T.gold + "22" : "transparent", border: `1px solid ${(m.tags || []).includes(t) ? T.gold + "66" : T.border}`, color: (m.tags || []).includes(t) ? T.gold : T.muted, transition: "all .25s", userSelect: "none" }}>{t}</span>)}
-            </div>
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 15, color: T.dim, marginBottom: 8, letterSpacing: ".1em", textTransform: "uppercase", display: "flex", justifyContent: "space-between" }}>
-              Anotações
-              <button onClick={() => { if (editing) update(m.id, { notes: notesDraft }); else setNotesDraft(m.notes || ""); setEditing(!editing); }}
-                style={{ background: "none", border: "none", color: T.gold, fontSize: 15, cursor: "pointer" }}>{editing ? "Salvar" : m.notes ? "Editar" : "Adicionar"}</button>
-            </div>
-            {editing ? <textarea value={notesDraft} onChange={e => setNotesDraft(e.target.value)} placeholder="Ideias pro Cinapse..." style={{ ...IS, minHeight: 100, resize: "vertical", lineHeight: 1.7 }} />
-              : m.notes ? <div style={{ fontSize: 17, color: T.muted, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{m.notes}</div>
-              : <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>Nenhuma anotação</div>}
-          </div>
-          <button onClick={() => remove(m.id)} style={{ background: "none", border: `1px solid ${T.red}44`, borderRadius: 6, color: T.red, fontSize: 15, padding: "6px 14px", cursor: "pointer", opacity: .6, transition: "opacity .25s" }}
-            onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = .6}>Remover do catálogo</button>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════
-  // WATCHLISTS
-  // ═══════════════════════════════════════════
-  if (view === "watchlists") {
-    if (selWatchlist) {
-      const wl = watchlists.find(w => w.id === selWatchlist.id);
-      if (!wl) { setSelWatchlist(null); return null; }
-      const movies = wl.movieIds.map(id => catalog.find(c => c.id === id)).filter(Boolean);
-      const watched = movies.filter(m => m.status === "assistido").length;
+        );
+      }
       return (
-        <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-          <button onClick={() => setSelWatchlist(null)} style={{ background: "none", border: "none", color: T.muted, fontSize: 17, cursor: "pointer", padding: 0, marginBottom: 20 }}>← Voltar</button>
-          <h2 style={{ fontSize: 28, fontWeight: 400, color: T.gold, margin: "0 0 4px" }}>{wl.name}</h2>
-          {wl.desc && <div style={{ fontSize: 16, color: T.muted, marginBottom: 8 }}>{wl.desc}</div>}
-          {movies.length > 0 && <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}><span style={{ fontSize: 15, color: T.muted }}>{watched}/{movies.length} assistidos</span><div style={{ flex: 1, maxWidth: 160, height: 5, background: T.border, borderRadius: 3, overflow: "hidden" }}><div style={{ width: `${(watched / movies.length) * 100}%`, height: "100%", background: T.green, borderRadius: 3, transition: "width .5s" }} /></div></div>}
-          {movies.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.dim }}>Adicione filmes pela ficha do catálogo.</div>}
-          {movies.map((m, i) => (
-            <div key={m.id} style={{ display: "flex", gap: 14, padding: "12px 16px", background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, marginBottom: 8, animation: `fadeUp .3s ease ${i * .04}s both`, alignItems: "center" }}>
-              <div style={{ flex: 1, cursor: "pointer" }} onClick={() => { setSelected(m); setView("detail"); }}>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({m.year})</span></div>
-                <div style={{ fontSize: 15, color: T.muted, marginTop: 2 }}>{m.director}</div>
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 7px", borderRadius: 4, background: m.status === "assistido" ? T.green + "cc" : T.blue + "cc", color: "#fff" }}>{m.status === "assistido" ? "VISTO" : "LISTA"}</span>
-              <button onClick={() => removeFromWatchlist(wl.id, m.id)} style={{ background: "none", border: "none", color: T.red, fontSize: 16, cursor: "pointer", opacity: .4 }} onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = .4}>×</button>
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: SP["2xl"] }}>
+            <h2 style={{ fontSize: FS.h2, fontWeight: FW.light, color: T.gold, margin: 0, fontFamily: FONT_SERIF }}>Watchlists Temáticas</h2>
+            <Btn active onClick={() => setShowWlCreate(!showWlCreate)}>+ Nova</Btn>
+          </div>
+          {showWlCreate && <Card padding={SP.lg} style={{ background: T.surface, marginBottom: SP.xl, animation: "fadeUp .3s ease" }}>
+            <Input value={wlName} onChange={e => setWlName(e.target.value)} placeholder="Nome (ex: Maratona Gaspar Noé)" onKeyDown={e => e.key === "Enter" && createWatchlist()} style={{ marginBottom: SP.sm }} />
+            <Input value={wlDesc} onChange={e => setWlDesc(e.target.value)} placeholder="Descrição (opcional)" style={{ fontSize: FS.base, marginBottom: SP.md }} />
+            <div style={{ display: "flex", gap: SP.sm }}><Button onClick={createWatchlist}>Criar</Button><Button variant="outline" onClick={() => setShowWlCreate(false)}>Cancelar</Button></div>
+          </Card>}
+          {watchlists.length === 0 && !showWlCreate && <EmptyState icon="📋" title="Nenhuma watchlist" />}
+          {watchlists.map((wl, i) => {
+            const movies = wl.movieIds.map(id => catalog.find(c => c.id === id)).filter(Boolean);
+            const w = movies.filter(m => m.status === "assistido").length;
+            return <Card key={wl.id} hover onClick={() => setSelWatchlist(wl)} padding="16px 20px" style={{ marginBottom: SP.md, animation: `fadeUp .3s ease ${i * .05}s both` }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><div><div style={{ fontSize: FS.xl, fontWeight: 600 }}>{wl.name}</div>{wl.desc && <div style={{ fontSize: FS.sm, color: T.dim, marginTop: 2 }}>{wl.desc}</div>}</div>
+                <button onClick={e => { e.stopPropagation(); deleteWatchlist(wl.id); }} style={{ background: "none", border: "none", color: T.red, fontSize: FS.md, cursor: "pointer", opacity: .4 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = .4}>×</button></div>
+              <div style={{ display: "flex", gap: SP.md, marginTop: SP.md - 2, fontSize: FS.sm, color: T.muted, alignItems: "center" }}><span>{movies.length} filme{movies.length !== 1 ? "s" : ""}</span>{movies.length > 0 && <><span style={{ color: T.green }}>{w} visto{w !== 1 ? "s" : ""}</span><ProgressBar value={w} max={movies.length} height={4} maxWidth={120} /></>}</div>
+            </Card>;
+          })}
+
+          {/* CURATED WATCHLISTS */}
+          <div style={{ marginTop: SP["4xl"] - 12, borderTop: `1px solid ${T.borderSoft}`, paddingTop: SP["2xl"] }}>
+            <SectionLabel style={{ marginBottom: SP.lg, letterSpacing: ".15em" }}>Watchlists Curadas</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: SP.md }}>
+              {CURATED_WATCHLISTS.map(cw => {
+                const exists = watchlists.some(w => w.name === cw.name);
+                const count = DB.filter(cw.match).length;
+                return <Card key={cw.name} hover={!exists} onClick={() => !exists && createCuratedWatchlist(cw)} padding="14px 16px"
+                  style={{ background: exists ? T.surface : T.card, borderColor: exists ? T.green + "44" : T.borderSoft, cursor: exists ? "default" : "pointer", opacity: exists ? .6 : 1 }}>
+                  <div style={{ fontSize: FS["2xl"] - 2, marginBottom: SP.sm - 2 }}>{cw.icon}</div>
+                  <div style={{ fontSize: FS.md, fontWeight: 600, color: exists ? T.green : T.text }}>{exists ? "✓ " : ""}{cw.name}</div>
+                  <div style={{ fontSize: FS.sm, color: T.dim, marginTop: SP.xs, lineHeight: 1.4 }}>{cw.desc}</div>
+                  <div style={{ fontSize: 13, color: T.muted, marginTop: SP.sm }}>{count} filme{count !== 1 ? "s" : ""}</div>
+                </Card>;
+              })}
             </div>
-          ))}
+          </div>
         </div>
       );
     }
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 300, color: T.gold, margin: 0 }}>Watchlists Temáticas</h2>
-          <Btn active onClick={() => setShowWlCreate(!showWlCreate)}>+ Nova</Btn>
-        </div>
-        {showWlCreate && <div style={{ padding: 18, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20, animation: "fadeUp .3s ease" }}>
-          <input value={wlName} onChange={e => setWlName(e.target.value)} placeholder="Nome (ex: Maratona Gaspar Noé)" onKeyDown={e => e.key === "Enter" && createWatchlist()} style={IS} />
-          <input value={wlDesc} onChange={e => setWlDesc(e.target.value)} placeholder="Descrição (opcional)" style={{ ...IS, fontSize: 16, marginBottom: 12 }} />
-          <div style={{ display: "flex", gap: 8 }}><button onClick={createWatchlist} style={{ padding: "8px 20px", background: T.gold, border: "none", borderRadius: 6, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Criar</button><button onClick={() => setShowWlCreate(false)} style={{ padding: "8px 16px", background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, color: T.muted, fontSize: 16, cursor: "pointer" }}>Cancelar</button></div>
-        </div>}
-        {watchlists.length === 0 && !showWlCreate && <div style={{ textAlign: "center", padding: "40px 20px", color: T.dim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: .3 }}>📋</div><div style={{ fontSize: 18, color: T.muted }}>Nenhuma watchlist</div></div>}
-        {watchlists.map((wl, i) => {
-          const movies = wl.movieIds.map(id => catalog.find(c => c.id === id)).filter(Boolean);
-          const w = movies.filter(m => m.status === "assistido").length;
-          return <div key={wl.id} onClick={() => setSelWatchlist(wl)} style={{ padding: "16px 20px", background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, cursor: "pointer", transition: "all .3s", marginBottom: 10, animation: `fadeUp .3s ease ${i * .05}s both` }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = T.purple + "66"; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.transform = "none"; }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><div><div style={{ fontSize: 20, fontWeight: 600 }}>{wl.name}</div>{wl.desc && <div style={{ fontSize: 15, color: T.dim, marginTop: 2 }}>{wl.desc}</div>}</div>
-              <button onClick={e => { e.stopPropagation(); deleteWatchlist(wl.id); }} style={{ background: "none", border: "none", color: T.red, fontSize: 17, cursor: "pointer", opacity: .4 }} onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = .4}>×</button></div>
-            <div style={{ display: "flex", gap: 12, marginTop: 10, fontSize: 15, color: T.muted }}><span>{movies.length} filme{movies.length !== 1 ? "s" : ""}</span>{movies.length > 0 && <><span style={{ color: T.green }}>{w} visto{w !== 1 ? "s" : ""}</span><div style={{ flex: 1, maxWidth: 120, height: 4, background: T.border, borderRadius: 2, alignSelf: "center", overflow: "hidden" }}><div style={{ width: `${(w / movies.length) * 100}%`, height: "100%", background: T.green, borderRadius: 2, transition: "width .5s" }} /></div></>}</div>
-          </div>;
-        })}
 
-        {/* CURATED WATCHLISTS */}
-        <div style={{ marginTop: 36, borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
-          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 16 }}>Watchlists Curadas</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
-            {CURATED_WATCHLISTS.map(cw => {
-              const exists = watchlists.some(w => w.name === cw.name);
-              const count = DB.filter(cw.match).length;
-              return <div key={cw.name} onClick={() => !exists && createCuratedWatchlist(cw)}
-                style={{ padding: "14px 16px", background: exists ? T.surface : T.card, border: `1px solid ${exists ? T.green + "44" : T.border}`, borderRadius: 10, cursor: exists ? "default" : "pointer", transition: "all .3s", opacity: exists ? .6 : 1 }}
-                onMouseEnter={e => { if (!exists) { e.currentTarget.style.borderColor = T.gold + "66"; e.currentTarget.style.transform = "translateY(-2px)"; }}}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = exists ? T.green + "44" : T.border; e.currentTarget.style.transform = "none"; }}>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>{cw.icon}</div>
-                <div style={{ fontSize: 17, fontWeight: 600, color: exists ? T.green : T.text }}>{exists ? "✓ " : ""}{cw.name}</div>
-                <div style={{ fontSize: 14, color: T.dim, marginTop: 4, lineHeight: 1.4 }}>{cw.desc}</div>
-                <div style={{ fontSize: 13, color: T.muted, marginTop: 8 }}>{count} filme{count !== 1 ? "s" : ""}</div>
-              </div>;
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════
-  // CHECKLISTS
-  // ═══════════════════════════════════════════
-  if (view === "checklists") {
-    if (selChecklist) {
-      const cl = checklists.find(c => c.id === selChecklist.id); if (!cl) { setSelChecklist(null); return null; }
-      const done = cl.items.filter(i => i.done).length;
-      return (
-        <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-          <button onClick={() => setSelChecklist(null)} style={{ background: "none", border: "none", color: T.muted, fontSize: 17, cursor: "pointer", padding: 0, marginBottom: 20 }}>← Voltar</button>
-          <h2 style={{ fontSize: 28, fontWeight: 400, color: T.gold, margin: "0 0 4px" }}>{cl.name}</h2>
-          {cl.items.length > 0 && <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20, marginTop: 8 }}><span style={{ fontSize: 15, color: T.muted }}>{done}/{cl.items.length}</span><div style={{ flex: 1, maxWidth: 180, height: 5, background: T.border, borderRadius: 3, overflow: "hidden" }}><div style={{ width: `${cl.items.length ? ((done / cl.items.length) * 100) : 0}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.green})`, borderRadius: 3, transition: "width .5s" }} /></div></div>}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            <input value={clInput} onChange={e => setClInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addChecklistItem(cl.id)} placeholder="Adicionar filme..."
-              style={{ ...IS, flex: 1, marginBottom: 0 }} onFocus={e => e.target.style.borderColor = T.gold + "66"} onBlur={e => e.target.style.borderColor = T.border} />
-            <button onClick={() => addChecklistItem(cl.id)} style={{ padding: "11px 18px", background: T.gold, border: "none", borderRadius: 8, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>+</button>
-          </div>
-          {cl.items.length === 0 && <div style={{ textAlign: "center", padding: 40, color: T.dim, fontSize: 17 }}>Digite filmes acima</div>}
-          {cl.items.map((item, i) => (
-            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: T.card, border: `1px solid ${item.done ? T.green + "33" : T.border}`, borderRadius: 8, marginBottom: 6, animation: `fadeUp .3s ease ${i * .03}s both`, transition: "all .3s" }}>
-              <div onClick={() => toggleCheckItem(cl.id, item.id)} style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${item.done ? T.green : T.border}`, background: item.done ? T.green + "22" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all .25s", flexShrink: 0 }}>
-                {item.done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>}
-              </div>
-              <span style={{ flex: 1, fontSize: 18, color: item.done ? T.dim : T.text, textDecoration: item.done ? "line-through" : "none", transition: "all .3s", fontStyle: item.done ? "italic" : "normal" }}>{item.text}</span>
-              <button onClick={() => removeCheckItem(cl.id, item.id)} style={{ background: "none", border: "none", color: T.red, fontSize: 16, cursor: "pointer", opacity: .3 }} onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = .3}>×</button>
+    // ── CHECKLISTS ──
+    if (view === "checklists") {
+      if (selChecklist) {
+        const cl = checklists.find(c => c.id === selChecklist.id); if (!cl) { setSelChecklist(null); return null; }
+        const done = cl.items.filter(i => i.done).length;
+        return (
+          <div>
+            <BackLink onClick={() => setSelChecklist(null)} style={{ marginBottom: SP.xl }} />
+            <h2 style={{ fontSize: FS.h2, fontWeight: FW.regular, color: T.gold, margin: "0 0 4px", fontFamily: FONT_SERIF }}>{cl.name}</h2>
+            {cl.items.length > 0 && <div style={{ display: "flex", gap: SP.md, alignItems: "center", marginBottom: SP.xl, marginTop: SP.sm }}><span style={{ fontSize: FS.sm, color: T.muted }}>{done}/{cl.items.length}</span><ProgressBar value={done} max={cl.items.length} maxWidth={180} gradient={`linear-gradient(90deg,${T.gold},${T.green})`} /></div>}
+            <div style={{ display: "flex", gap: SP.sm, marginBottom: SP.xl }}>
+              <Input value={clInput} onChange={e => setClInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addChecklistItem(cl.id)} placeholder="Adicionar filme..." style={{ flex: 1 }} />
+              <Button onClick={() => addChecklistItem(cl.id)} style={{ padding: "11px 18px" }}>+</Button>
             </div>
-          ))}
+            {cl.items.length === 0 && <div style={{ textAlign: "center", padding: 40, color: T.dim, fontSize: FS.md }}>Digite filmes acima</div>}
+            {cl.items.map((item, i) => (
+              <div key={item.id} style={{ display: "flex", alignItems: "center", gap: SP.md, padding: "12px 16px", ...cardStyle, borderColor: item.done ? T.green + "33" : T.borderSoft, marginBottom: SP.sm - 2, animation: `fadeUp .3s ease ${i * .03}s both`, transition: "all .3s" }}>
+                <div onClick={() => toggleCheckItem(cl.id, item.id)} style={{ width: 22, height: 22, borderRadius: R.sm, border: `2px solid ${item.done ? T.green : T.border}`, background: item.done ? T.green + "22" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all .25s", flexShrink: 0 }}>
+                  {item.done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>}
+                </div>
+                <span style={{ flex: 1, fontSize: FS.lg, color: item.done ? T.dim : T.text, textDecoration: item.done ? "line-through" : "none", transition: "all .3s", fontStyle: item.done ? "italic" : "normal" }}>{item.text}</span>
+                <button onClick={() => removeCheckItem(cl.id, item.id)} style={{ background: "none", border: "none", color: T.red, fontSize: FS.base, cursor: "pointer", opacity: .3 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = .3}>×</button>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: SP["2xl"] }}>
+            <h2 style={{ fontSize: FS.h2, fontWeight: FW.light, color: T.gold, margin: 0, fontFamily: FONT_SERIF }}>Listas de Filmes</h2>
+            <Btn active onClick={() => setShowClCreate(!showClCreate)}>+ Nova</Btn>
+          </div>
+          {showClCreate && <Card padding={SP.lg} style={{ background: T.surface, marginBottom: SP.xl, animation: "fadeUp .3s ease" }}>
+            <Input value={clName} onChange={e => setClName(e.target.value)} placeholder="Nome da lista" onKeyDown={e => e.key === "Enter" && createChecklist()} style={{ marginBottom: SP.md }} />
+            <div style={{ display: "flex", gap: SP.sm }}><Button onClick={createChecklist}>Criar</Button><Button variant="outline" onClick={() => setShowClCreate(false)}>Cancelar</Button></div>
+          </Card>}
+          {checklists.length === 0 && !showClCreate && <EmptyState icon="✅" title="Nenhuma lista" hint="Monte listas e vá riscando" />}
+          {checklists.map((cl, i) => {
+            const done = cl.items.filter(x => x.done).length;
+            return <Card key={cl.id} hover onClick={() => setSelChecklist(cl)} padding="16px 20px" style={{ marginBottom: SP.md, animation: `fadeUp .3s ease ${i * .05}s both` }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><div style={{ fontSize: FS.xl, fontWeight: 600 }}>{cl.name}</div>
+                <button onClick={e => { e.stopPropagation(); deleteChecklist(cl.id); }} style={{ background: "none", border: "none", color: T.red, fontSize: FS.md, cursor: "pointer", opacity: .4 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = .4}>×</button></div>
+              <div style={{ display: "flex", gap: SP.md, alignItems: "center", marginTop: SP.sm, fontSize: FS.sm, color: T.muted }}><span>{cl.items.length} filme{cl.items.length !== 1 ? "s" : ""}</span>{cl.items.length > 0 && <><span style={{ color: T.green }}>{done} assistido{done !== 1 ? "s" : ""}</span><ProgressBar value={done} max={cl.items.length} height={4} maxWidth={120} gradient={`linear-gradient(90deg,${T.gold},${T.green})`} /></>}</div>
+            </Card>;
+          })}
         </div>
       );
     }
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 300, color: T.gold, margin: 0 }}>Listas de Filmes</h2>
-          <Btn active onClick={() => setShowClCreate(!showClCreate)}>+ Nova</Btn>
-        </div>
-        {showClCreate && <div style={{ padding: 18, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20, animation: "fadeUp .3s ease" }}>
-          <input value={clName} onChange={e => setClName(e.target.value)} placeholder="Nome da lista" onKeyDown={e => e.key === "Enter" && createChecklist()} style={IS} />
-          <div style={{ display: "flex", gap: 8 }}><button onClick={createChecklist} style={{ padding: "8px 20px", background: T.gold, border: "none", borderRadius: 6, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Criar</button><button onClick={() => setShowClCreate(false)} style={{ padding: "8px 16px", background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, color: T.muted, fontSize: 16, cursor: "pointer" }}>Cancelar</button></div>
-        </div>}
-        {checklists.length === 0 && !showClCreate && <div style={{ textAlign: "center", padding: "60px 20px", color: T.dim }}><div style={{ fontSize: 40, marginBottom: 12, opacity: .3 }}>✅</div><div style={{ fontSize: 18, color: T.muted }}>Nenhuma lista</div><div style={{ fontSize: 16, marginTop: 6 }}>Monte listas e vá riscando</div></div>}
-        {checklists.map((cl, i) => {
-          const done = cl.items.filter(x => x.done).length;
-          return <div key={cl.id} onClick={() => setSelChecklist(cl)} style={{ padding: "16px 20px", background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, cursor: "pointer", transition: "all .3s", marginBottom: 10, animation: `fadeUp .3s ease ${i * .05}s both` }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = T.gold + "44"; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.transform = "none"; }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><div style={{ fontSize: 20, fontWeight: 600 }}>{cl.name}</div>
-              <button onClick={e => { e.stopPropagation(); deleteChecklist(cl.id); }} style={{ background: "none", border: "none", color: T.red, fontSize: 17, cursor: "pointer", opacity: .4 }} onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = .4}>×</button></div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8, fontSize: 15, color: T.muted }}><span>{cl.items.length} filme{cl.items.length !== 1 ? "s" : ""}</span>{cl.items.length > 0 && <><span style={{ color: T.green }}>{done} assistido{done !== 1 ? "s" : ""}</span><div style={{ flex: 1, maxWidth: 120, height: 4, background: T.border, borderRadius: 2, overflow: "hidden" }}><div style={{ width: `${cl.items.length ? ((done / cl.items.length) * 100) : 0}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.green})`, borderRadius: 2, transition: "width .5s" }} /></div></>}</div>
-          </div>;
-        })}
-      </div>
-    );
-  }
 
-  // ═══════════════════════════════════════════
-  // STATS
-  // ═══════════════════════════════════════════
-  if (view === "stats") {
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-        <h2 style={{ fontSize: 28, fontWeight: 300, color: T.gold, marginBottom: 28 }}>Estatísticas</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 36 }}>
-          {[["Total", stats.total, T.text], ["Assistidos", stats.watched, T.green], ["Quero Ver", stats.want, T.blue], ["Nota Média", stats.avg, T.gold]].map(([l, v, c]) => (
-            <div key={l} style={{ background: T.surface, borderRadius: 12, padding: 18, textAlign: "center", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 32, fontWeight: 300, color: c }}>{v}</div>
-              <div style={{ fontSize: 13, color: T.muted, letterSpacing: ".15em", textTransform: "uppercase", marginTop: 6 }}>{l}</div>
+    // ── STATS ──
+    if (view === "stats") {
+      return (
+        <div>
+          <h2 style={{ fontSize: FS.h2, fontWeight: FW.light, color: T.gold, marginBottom: SP["3xl"], fontFamily: FONT_SERIF }}>Estatísticas</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: SP.md + 2, marginBottom: SP["4xl"] - 12 }}>
+            {[["Total", stats.total, T.text], ["Assistidos", stats.watched, T.green], ["Quero Ver", stats.want, T.blue], ["Nota Média", stats.avg, T.gold]].map(([l, v, c]) => (
+              <StatCard key={l} label={l} value={v} color={c} />
+            ))}
+          </div>
+          {stats.genres.length > 0 && <div style={{ marginBottom: SP["3xl"] - 4 }}>
+            <SectionLabel style={{ marginBottom: SP.md, letterSpacing: ".15em" }}>Top Gêneros</SectionLabel>
+            {stats.genres.map(([g, n]) => <div key={g} style={{ display: "flex", alignItems: "center", gap: SP.md, marginBottom: SP.sm }}><div style={{ width: 110, fontSize: FS.base, color: T.muted, textAlign: "right" }}>{g}</div><ProgressBar value={n} max={stats.genres[0][1]} height={6} gradient={`linear-gradient(90deg,${T.gold},${T.goldDim})`} style={{ background: T.surface }} /><div style={{ fontSize: FS.base, color: T.muted, width: 24 }}>{n}</div></div>)}
+          </div>}
+          {stats.directors.length > 0 && <div style={{ marginBottom: SP["3xl"] - 4 }}>
+            <SectionLabel style={{ marginBottom: SP.md, letterSpacing: ".15em" }}>Top Diretores</SectionLabel>
+            {stats.directors.map(([d, n]) => <div key={d} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.borderSoft}`, fontSize: FS.md }}><span>{d}</span><span style={{ color: T.gold }}>{n}</span></div>)}
+          </div>}
+          {catalog.length === 0 && <div style={{ textAlign: "center", color: T.dim, marginTop: 60 }}>Adicione filmes para ver estatísticas.</div>}
+        </div>
+      );
+    }
+
+    // ── SETTINGS ──
+    if (view === "settings") {
+      return (
+        <div>
+          <h2 style={{ fontSize: FS.h2, fontWeight: FW.light, color: T.gold, marginBottom: SP["3xl"], fontFamily: FONT_SERIF }}>Configurações</h2>
+          <Card padding={SP.xl} style={{ background: T.surface, marginBottom: SP.xl }}>
+            <SectionLabel style={{ marginBottom: SP.md }}>TMDb API Key</SectionLabel>
+            <p style={{ fontSize: FS.base, color: T.muted, lineHeight: 1.6, marginBottom: SP.lg }}>
+              Com a chave do TMDb, a busca retorna filmes de todo o catálogo mundial com pôsteres, sinopses, elenco e dados de streaming atualizados. Sem ela, a busca usa apenas o banco local de {DB.length} filmes curados.
+            </p>
+            <p style={{ fontSize: FS.base, color: T.dim, marginBottom: SP.lg }}>
+              Gratuita em <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" style={{ color: T.gold, textDecoration: "none" }}>themoviedb.org/settings/api</a>
+            </p>
+            <div style={{ display: "flex", gap: SP.sm }}>
+              <Input value={keyInput} onChange={e => setKeyInput(e.target.value)} placeholder="Cole sua API key aqui..." style={{ flex: 1, fontFamily: "monospace", fontSize: FS.base }} />
+              <Button onClick={() => { tmdb.setApiKey(keyInput.trim()); flash("API key salva!"); }}>Salvar</Button>
             </div>
-          ))}
+            {tmdb.hasApiKey() && <div style={{ marginTop: SP.md - 2, fontSize: FS.sm, color: T.green }}>✓ API key configurada</div>}
+          </Card>
+          <Card padding={SP.xl} style={{ background: T.surface, marginBottom: SP.xl }}>
+            <SectionLabel style={{ marginBottom: SP.md }}>Backup & Sincronização</SectionLabel>
+            <p style={{ fontSize: FS.base, color: T.muted, lineHeight: 1.6, marginBottom: SP.lg }}>
+              Exporte um arquivo JSON com seu catálogo, watchlists, listas e API key. Importe em outro dispositivo (ex: iPhone) para migrar tudo de uma vez.
+            </p>
+            <div style={{ display: "flex", gap: SP.sm, flexWrap: "wrap" }}>
+              <Button onClick={handleExport}>Exportar JSON</Button>
+              <Button variant="outline" color={T.gold} active onClick={() => fileInputRef.current?.click()}>Importar JSON</Button>
+              <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} style={{ display: "none" }} />
+            </div>
+          </Card>
+          <Card padding={SP.xl} style={{ background: T.surface, marginBottom: SP.xl }}>
+            <SectionLabel style={{ marginBottom: SP.md }}>Dados</SectionLabel>
+            <div style={{ fontSize: FS.base, color: T.muted }}>{catalog.length} filmes · {watchlists.length} watchlists · {checklists.length} listas</div>
+            <div style={{ fontSize: FS.sm, color: T.dim, marginTop: SP.sm }}>Banco local: {DB.length} filmes curados</div>
+          </Card>
+          <Card padding={SP.xl} style={{ background: T.surface }}>
+            <SectionLabel style={{ marginBottom: SP.md }}>Sobre o Cinapse</SectionLabel>
+            <p style={{ fontSize: FS.base, color: T.muted, lineHeight: 1.6, margin: "0 0 16px" }}>
+              Conheça a estratégia de marketing e crescimento do Cinapse.
+            </p>
+            <Button variant="outline" color={T.gold} active onClick={() => setView("marketing")}>Ver Plano de Marketing</Button>
+          </Card>
         </div>
-        {stats.genres.length > 0 && <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 16, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 12 }}>Top Gêneros</div>
-          {stats.genres.map(([g, n]) => <div key={g} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}><div style={{ width: 110, fontSize: 16, color: T.muted, textAlign: "right" }}>{g}</div><div style={{ flex: 1, height: 6, background: T.surface, borderRadius: 3, overflow: "hidden" }}><div style={{ width: `${(n / stats.genres[0][1]) * 100}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.goldDim})`, borderRadius: 3, transition: "width .8s" }} /></div><div style={{ fontSize: 16, color: T.muted, width: 24 }}>{n}</div></div>)}
-        </div>}
-        {stats.directors.length > 0 && <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 16, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 12 }}>Top Diretores</div>
-          {stats.directors.map(([d, n]) => <div key={d} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.border}22`, fontSize: 17 }}><span>{d}</span><span style={{ color: T.gold }}>{n}</span></div>)}
-        </div>}
-        {catalog.length === 0 && <div style={{ textAlign: "center", color: T.dim, marginTop: 60 }}>Adicione filmes para ver estatísticas.</div>}
-      </div>
-    );
-  }
+      );
+    }
 
-  // ═══════════════════════════════════════════
-  // SETTINGS
-  // ═══════════════════════════════════════════
-  if (view === "settings") {
+    // ── MAIN CATALOG ──
+    const hasResults = searchMode === "local" ? localResults.length > 0 : tmdbResults.length > 0;
+    const showingSearch = (query.length >= 2 && (hasResults || loading || searchError)) || hasResults || showAllLocal;
+
     return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-        <h2 style={{ fontSize: 28, fontWeight: 300, color: T.gold, marginBottom: 28 }}>Configurações</h2>
-        <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20 }}>
-          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>TMDb API Key</div>
-          <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
-            Com a chave do TMDb, a busca retorna filmes de todo o catálogo mundial com pôsteres, sinopses, elenco e dados de streaming atualizados. Sem ela, a busca usa apenas o banco local de {DB.length} filmes curados.
-          </p>
-          <p style={{ fontSize: 16, color: T.dim, marginBottom: 16 }}>
-            Gratuita em <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" style={{ color: T.gold, textDecoration: "none" }}>themoviedb.org/settings/api</a>
-          </p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input value={keyInput} onChange={e => setKeyInput(e.target.value)} placeholder="Cole sua API key aqui..."
-              style={{ ...IS, flex: 1, marginBottom: 0, fontFamily: "monospace", fontSize: 16 }} />
-            <button onClick={() => { tmdb.setApiKey(keyInput.trim()); flash("API key salva!"); }}
-              style={{ padding: "10px 20px", background: T.gold, border: "none", borderRadius: 8, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Salvar</button>
+      <div>
+        {/* Marca (apenas mobile; desktop usa a top nav) */}
+        <div className="cinapse-brand-mobile" style={{ flexDirection: "column", marginBottom: SP.lg }}>
+          <div style={{ fontSize: FS.hero, color: T.gold, letterSpacing: ".08em", fontWeight: FW.light, fontFamily: FONT_SERIF }}>CINAPSE</div>
+          <div style={{ fontSize: 13, color: T.dim, letterSpacing: ".2em", textTransform: "uppercase" }}>{catalog.length} filme{catalog.length !== 1 ? "s" : ""} · {DB.length} no banco</div>
+        </div>
+
+        {/* SEARCH */}
+        <div style={{ marginBottom: SP.sm }}>
+          <div style={{ display: "flex", gap: SP.sm, marginBottom: SP.sm }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <Input value={query} onChange={e => handleQueryChange(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && searchMode === "tmdb") doTmdbSearch(); }}
+                placeholder={searchMode === "local" ? "Buscar no banco local..." : "Buscar no TMDb... (Enter)"}
+                style={{ background: T.surface, padding: "13px 44px 13px 18px", fontSize: FS.lg, borderRadius: R.lg }} />
+              {query && (
+                <button onClick={() => { setQuery(""); setLocalResults([]); setTmdbResults([]); setSearchError(""); setShowAllLocal(false); }}
+                  style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: T.border, border: "none", color: T.muted, fontSize: FS.base, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 1, transition: "all .2s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = T.red + "44"; e.currentTarget.style.color = T.red; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.muted; }}>×</button>
+              )}
+            </div>
+            {searchMode === "tmdb" && (
+              <Button onClick={doTmdbSearch} disabled={loading || !query.trim()} style={{ padding: "13px 22px", fontSize: FS.md, borderRadius: R.lg }}>
+                {loading ? "..." : "Buscar"}
+              </Button>
+            )}
           </div>
-          {tmdb.hasApiKey() && <div style={{ marginTop: 10, fontSize: 15, color: T.green }}>✓ API key configurada</div>}
-        </div>
-        <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20 }}>
-          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Backup & Sincronização</div>
-          <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
-            Exporte um arquivo JSON com seu catálogo, watchlists, listas e API key. Importe em outro dispositivo (ex: iPhone) para migrar tudo de uma vez.
-          </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={handleExport}
-              style={{ padding: "10px 20px", background: T.gold, border: "none", borderRadius: 8, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Exportar JSON</button>
-            <button onClick={() => fileInputRef.current?.click()}
-              style={{ padding: "10px 20px", background: "transparent", border: `1px solid ${T.gold}66`, borderRadius: 8, color: T.gold, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Importar JSON</button>
-            <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} style={{ display: "none" }} />
+          <div style={{ display: "flex", gap: SP.md, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: SP.xs }}>
+              <Btn active={searchMode === "local"} onClick={() => { setSearchMode("local"); setTmdbResults([]); setSearchError(""); if (query.length >= 2) doLocalSearch(query); }}>Local ({DB.length})</Btn>
+              <Btn active={searchMode === "tmdb"} color={tmdb.hasApiKey() ? T.gold : T.dim} onClick={() => { setSearchMode("tmdb"); setLocalResults([]); }}>TMDb {tmdb.hasApiKey() ? "✓" : "🔑"}</Btn>
+            </div>
+            <button onClick={() => setShowManual(!showManual)} style={{ background: "none", border: "none", color: T.muted, fontSize: FS.sm, cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }}>{showManual ? "Fechar" : "+ Manual"}</button>
+            {searchMode === "local" && <button onClick={() => { setShowAllLocal(!showAllLocal); setLocalResults(showAllLocal ? [] : DB); setQuery(""); }} style={{ background: "none", border: "none", color: T.gold, fontSize: FS.sm, cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }}>{showAllLocal ? "Fechar catálogo" : `Ver todos (${DB.length})`}</button>}
           </div>
         </div>
-        <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}` }}>
-          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Dados</div>
-          <div style={{ fontSize: 16, color: T.muted }}>{catalog.length} filmes · {watchlists.length} watchlists · {checklists.length} listas</div>
-          <div style={{ fontSize: 15, color: T.dim, marginTop: 8 }}>Banco local: {DB.length} filmes curados</div>
-        </div>
-        <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginTop: 20 }}>
-          <div style={{ fontSize: 12, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Sobre o Cinapse</div>
-          <p style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 16, margin: "0 0 16px" }}>
-            Conheça a estratégia de marketing e crescimento do Cinapse.
-          </p>
-          <button onClick={() => setView("marketing")}
-            style={{ padding: "10px 20px", background: T.gold + "22", border: `1px solid ${T.gold}44`, borderRadius: 8, color: T.gold, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Georgia,serif" }}>
-            Ver Plano de Marketing
-          </button>
-        </div>
+
+        {/* MANUAL ADD */}
+        {showManual && <Card padding={SP.lg} style={{ background: T.surface, marginBottom: SP.xl, marginTop: SP.md, animation: "fadeUp .3s ease" }}>
+          <SectionLabel style={{ marginBottom: SP.md }}>Adicionar Manualmente</SectionLabel>
+          <Input value={manTitle} onChange={e => setManTitle(e.target.value)} placeholder="Título *" onKeyDown={e => e.key === "Enter" && addManual()} style={{ marginBottom: SP.sm }} />
+          <div style={{ display: "flex", gap: SP.sm, marginBottom: SP.sm }}><Input value={manYear} onChange={e => setManYear(e.target.value)} placeholder="Ano" style={{ flex: 1 }} /><Input value={manDirector} onChange={e => setManDirector(e.target.value)} placeholder="Diretor" style={{ flex: 2 }} /></div>
+          <Input value={manGenres} onChange={e => setManGenres(e.target.value)} placeholder="Gêneros (vírgula)" style={{ marginBottom: SP.md }} />
+          <Button onClick={addManual} disabled={!manTitle.trim()}>Adicionar</Button>
+        </Card>}
+
+        {/* LOADING */}
+        {previewLoading && <Spinner text="Carregando detalhes..." />}
+        {loading && <Spinner text="Buscando no TMDb..." />}
+        {searchError && !loading && <div style={{ padding: SP.lg, textAlign: "center", color: T.red, fontSize: FS.base, background: T.red + "11", borderRadius: R.md, marginTop: SP.md, marginBottom: SP.lg }}>{searchError}</div>}
+
+        {/* LOCAL RESULTS */}
+        {searchMode === "local" && (localResults.length > 0 || showAllLocal) && <div style={{ marginTop: SP.lg, marginBottom: SP["3xl"] - 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: SP.md - 2, flexWrap: "wrap", gap: SP.sm }}>
+            <SectionLabel>{localResults.length} resultado{localResults.length !== 1 ? "s" : ""} <span style={{ fontSize: 13, fontWeight: 400, opacity: .7 }}>— clique para detalhes</span></SectionLabel>
+            {showAllLocal && <div style={{ display: "flex", gap: SP.sm - 2 }}>
+              {[["title", "A-Z"], ["rating", "Nota ↓"], ["year", "Ano ↓"]].map(([k, label]) => (
+                <Btn key={k} active={localSort === k} onClick={() => { setLocalSort(k); setLocalResults(prev => [...prev].sort(k === "rating" ? (a, b) => (b.rating || 0) - (a.rating || 0) : k === "year" ? (a, b) => (b.year || 0) - (a.year || 0) : (a, b) => (a.title || "").localeCompare(b.title || ""))); }}>{label}</Btn>
+              ))}
+            </div>}
+          </div>
+          {localResults.map((m, i) => {
+            const inCat = catalog.some(c => c.title === m.title && c.year === m.year);
+            return <div key={i} onClick={() => previewLocal(m)} style={{ display: "flex", gap: SP.lg, padding: "12px 16px", ...cardStyle, borderColor: inCat ? T.goldBorder : T.borderSoft, marginBottom: SP.sm, animation: `fadeUp .35s ease ${i * .05}s both`, alignItems: "center", cursor: "pointer", transition: "all .2s" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateX(4px)"; e.currentTarget.style.borderColor = T.goldBorderStrong; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = inCat ? T.goldBorder : T.borderSoft; }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: FS.lg, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({m.year})</span></div>
+                <div style={{ fontSize: FS.sm, color: T.muted, marginTop: 3 }}>{m.director && <span style={{ color: T.gold }}>{m.director}</span>}{m.runtime > 0 && <span> · {m.runtime}min</span>}{m.rating > 0 && <span> · ★{Number(m.rating).toFixed(1)}</span>}</div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5 }}>{(m.genres || []).slice(0, 4).map(g => <span key={g} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 12, background: T.goldSoft, color: T.goldDim, border: `1px solid ${T.goldBorder}` }}>{g}</span>)}</div>
+              </div>
+              <Button variant="outline" color={inCat ? T.green : T.gold} active onClick={(e) => { e.stopPropagation(); addFromLocal(m); }} disabled={inCat} size="sm" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{inCat ? "✓" : "+ Adicionar"}</Button>
+              <span style={{ color: T.dim, fontSize: FS.lg, flexShrink: 0 }}>›</span>
+            </div>;
+          })}
+        </div>}
+
+        {/* TMDB RESULTS */}
+        {searchMode === "tmdb" && !loading && tmdbResults.length > 0 && <div style={{ marginTop: SP.lg, marginBottom: SP["3xl"] - 4 }}>
+          <SectionLabel style={{ marginBottom: SP.md - 2 }}>{tmdbResults.length} resultado{tmdbResults.length !== 1 ? "s" : ""} do TMDb <span style={{ fontSize: 13, fontWeight: 400, opacity: .7 }}>— clique para detalhes</span></SectionLabel>
+          {tmdbResults.map((m, i) => {
+            const yr = (m.release_date || "").slice(0, 4);
+            const inCat = catalog.some(c => c.title === m.title && c.year === yr);
+            return <div key={m.id} onClick={() => previewTmdb(m)} style={{ display: "flex", gap: SP.md + 2, padding: "12px 16px", ...cardStyle, borderColor: inCat ? T.goldBorder : T.borderSoft, marginBottom: SP.sm, animation: `fadeUp .35s ease ${i * .05}s both`, alignItems: "center", cursor: "pointer", transition: "all .2s" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateX(4px)"; e.currentTarget.style.borderColor = T.goldBorderStrong; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = inCat ? T.goldBorder : T.borderSoft; }}>
+              {m.poster_path && <img src={tmdb.posterUrl(m.poster_path, "w92")} alt="" style={{ width: 46, height: 69, borderRadius: R.sm, objectFit: "cover", flexShrink: 0 }} onError={e => e.target.style.display = "none"} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: FS.lg, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({yr})</span></div>
+                {m.vote_average > 0 && <div style={{ fontSize: FS.sm, color: T.gold, marginTop: 2 }}>★ {m.vote_average.toFixed(1)}</div>}
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>{tmdb.genreNames(m.genre_ids).slice(0, 4).map(g => <span key={g} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 12, background: T.goldSoft, color: T.goldDim, border: `1px solid ${T.goldBorder}` }}>{g}</span>)}</div>
+              </div>
+              <Button variant="outline" color={inCat ? T.green : T.gold} active onClick={(e) => { e.stopPropagation(); addFromTmdb(m); }} disabled={inCat} size="sm" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{inCat ? "✓" : "+ Adicionar"}</Button>
+              <span style={{ color: T.dim, fontSize: FS.lg, flexShrink: 0 }}>›</span>
+            </div>;
+          })}
+        </div>}
+
+        {/* FILTERS */}
+        {catalog.length > 0 && !showingSearch && <div style={{ marginBottom: SP.xl, marginTop: SP.lg, display: "flex", gap: SP.sm, alignItems: "center", flexWrap: "wrap" }}>
+          {[["all", "Todos"], ["quero_ver", "Quero Ver"], ["assistido", "Assistidos"], ["abandonado", "Abandonados"]].map(([v, l]) => <Btn key={v} active={filterStatus === v} onClick={() => setFilterStatus(v)}>{l}</Btn>)}
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={selectStyle}>
+            <option value="added">Recentes</option><option value="rating">Nota</option><option value="year">Ano</option><option value="title">Título</option>
+          </select>
+          {allTags.length > 0 && <select value={filterTag} onChange={e => setFilterTag(e.target.value)} style={selectStyle}>
+            <option value="">Tags</option>{allTags.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>}
+        </div>}
+
+        {/* CATALOG GRID */}
+        {!showingSearch && (catalog.length === 0 ?
+          <EmptyState icon="🎬" title="Catálogo vazio" hint="Busque ou adicione manualmente" />
+          : <>
+            {/* Fetch posters button */}
+            {tmdb.hasApiKey() && catalog.some(m => !m.poster_path) && (
+              <div style={{ marginTop: SP.sm, marginBottom: SP.md }}>
+                <Button variant="outline" color={T.gold} active size="sm" onClick={async () => {
+                  flash("Buscando pôsteres...", "info");
+                  await tmdb.fetchMissingPosters(catalog, (id, data) => update(id, data));
+                  flash("Pôsteres atualizados!");
+                }}>🖼 Buscar pôsteres ({catalog.filter(m => !m.poster_path).length} sem capa)</Button>
+              </div>
+            )}
+            <div className="catalog-grid">
+              {filtered.map((m, i) => (
+                <div key={m.id} onClick={() => { setSelected(m); setView("detail"); setStreaming(null); }}
+                  style={{ cursor: "pointer", borderRadius: R.lg, overflow: "hidden", transition: "all .3s", animation: `fadeUp .4s ease ${Math.min(i * .03, .5)}s both`, position: "relative" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px) scale(1.03)"; e.currentTarget.style.boxShadow = SH.glow; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                  {/* Poster or Fallback */}
+                  <div style={{ width: "100%", aspectRatio: "2/3", position: "relative", overflow: "hidden" }}>
+                    {m.poster_path ? (
+                      <img src={tmdb.posterUrl(m.poster_path)} alt={m.title}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        onError={e => { e.target.onerror = null; e.target.style.display = "none"; if (e.target.nextSibling) e.target.nextSibling.style.display = "flex"; }} />
+                    ) : null}
+                    {/* Fallback — styled title card */}
+                    <div style={{
+                      width: "100%", height: "100%", position: m.poster_path ? "absolute" : "relative",
+                      top: 0, left: 0, display: m.poster_path ? "none" : "flex",
+                      flexDirection: "column", justifyContent: "flex-end", padding: 14,
+                      background: `linear-gradient(135deg, ${T.surface} 0%, #1a1525 50%, #12101a 100%)`,
+                    }}>
+                      <div style={{ fontSize: 14, color: T.gold, letterSpacing: ".08em", fontWeight: 600, textTransform: "uppercase", marginBottom: 4, opacity: .7 }}>{m.year}</div>
+                      <div style={{ fontSize: FS.lg, fontWeight: 600, color: T.text, lineHeight: 1.25, marginBottom: 6 }}>{m.title}</div>
+                      <div style={{ fontSize: 14, color: T.muted }}>{m.director}</div>
+                      {m.rating > 0 && <div style={{ fontSize: 14, color: T.gold, marginTop: 4 }}>★ {Number(m.rating).toFixed(1)}</div>}
+                    </div>
+
+                    {/* Status badge */}
+                    <div style={{
+                      position: "absolute", top: 8, right: 8, padding: "3px 8px", borderRadius: 4,
+                      fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
+                      background: m.status === "assistido" ? T.green + "dd" : m.status === "abandonado" ? T.red + "dd" : T.blue + "dd",
+                      color: "#fff", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
+                    }}>
+                      {m.status === "assistido" ? "VISTO" : m.status === "abandonado" ? "DROP" : "LISTA"}
+                    </div>
+
+                    {/* Rating badge */}
+                    {m.myRating > 0 && (
+                      <div style={{
+                        position: "absolute", bottom: 8, left: 8, display: "flex", alignItems: "center", gap: 3,
+                        background: "rgba(0,0,0,.75)", padding: "3px 8px", borderRadius: 4,
+                        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
+                      }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={T.gold} /></svg>
+                        <span style={{ fontSize: 14, color: T.gold, fontWeight: 700 }}>{m.myRating}</span>
+                      </div>
+                    )}
+
+                    {/* Tags badge */}
+                    {(m.tags || []).length > 0 && (
+                      <div style={{
+                        position: "absolute", bottom: 8, right: 8,
+                        background: "rgba(0,0,0,.65)", padding: "2px 7px", borderRadius: 4,
+                        fontSize: 12, color: T.goldDim, backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
+                      }}>
+                        {m.tags[0]}{m.tags.length > 1 ? ` +${m.tags.length - 1}` : ""}
+                      </div>
+                    )}
+
+                    {/* Hover overlay with info — only for poster cards */}
+                    {m.poster_path && (
+                      <div className="poster-overlay" style={{
+                        position: "absolute", bottom: 0, left: 0, right: 0,
+                        background: "linear-gradient(transparent 0%, rgba(0,0,0,.9) 100%)",
+                        padding: "50px 12px 10px", pointerEvents: "none"
+                      }}>
+                        <div style={{ fontSize: FS.base, fontWeight: 600, color: "#fff", lineHeight: 1.2 }}>{m.title}</div>
+                        <div style={{ fontSize: 14, color: T.muted, marginTop: 2 }}>{m.year}{m.director ? ` · ${m.director}` : ""}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Title below poster for poster cards */}
+                  {m.poster_path && (
+                    <div style={{ padding: "8px 10px 10px", background: T.card }}>
+                      <div style={{ fontSize: FS.base, fontWeight: 600, lineHeight: 1.25, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</div>
+                      <div style={{ fontSize: 14, color: T.dim, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.year}{m.director ? ` · ${m.director}` : ""}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     );
-  }
+  };
 
-  // ═══════════════════════════════════════════
-  // MARKETING PLAN
-  // ═══════════════════════════════════════════
+  // ── Marketing ocupa a tela inteira (layout próprio, com back) ──
   if (view === "marketing") {
-    return <MarketingPlan onBack={() => setView("settings")} />;
+    return (
+      <>
+        <Notif notif={notif} />
+        <Nav view={view} onNavigate={go} />
+        <MarketingPlan onBack={() => setView("settings")} />
+      </>
+    );
   }
-
-  // ═══════════════════════════════════════════
-  // MARKETING PLAN
-  // ═══════════════════════════════════════════
-  if (view === "marketing") {
-    return <MarketingPlan onBack={() => setView("settings")} />;
-  }
-
-  // ═══════════════════════════════════════════
-  // MAIN CATALOG
-  // ═══════════════════════════════════════════
-  const hasResults = searchMode === "local" ? localResults.length > 0 : tmdbResults.length > 0;
-  const showingSearch = (query.length >= 2 && (hasResults || loading || searchError)) || hasResults || showAllLocal;
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "24px 20px" }}>
-      {notif && <div style={{ position: "fixed", top: "max(20px, env(safe-area-inset-top))", right: "max(20px, env(safe-area-inset-right))", zIndex: 100, padding: "12px 20px", borderRadius: 8, fontSize: 16, fontWeight: 600, background: notif.type === "ok" ? T.green + "dd" : notif.type === "info" ? T.blue + "dd" : T.red + "dd", color: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,.4)", animation: "fadeUp .3s ease" }}>{notif.msg}</div>}
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 36, color: T.gold, letterSpacing: ".08em", fontWeight: 300, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>CINAPSE</div>
-          <div style={{ fontSize: 14, color: T.dim, letterSpacing: ".2em", textTransform: "uppercase" }}>{catalog.length} filme{catalog.length !== 1 ? "s" : ""} · {DB.length} no banco</div>
-        </div>
+    <>
+      <Notif notif={notif} />
+      <Nav view={view} onNavigate={go} count={view === "main" ? catalog.length : null} dbCount={DB.length} />
+      <div className={`cinapse-page${view === "main" ? " wide" : ""}`}>
+        {renderView()}
       </div>
-      <TabBar />
-
-      {/* SEARCH */}
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          <div style={{ flex: 1, position: "relative" }}>
-            <input value={query} onChange={e => handleQueryChange(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && searchMode === "tmdb") doTmdbSearch(); }}
-              placeholder={searchMode === "local" ? "Buscar no banco local..." : "Buscar no TMDb... (Enter)"}
-              style={{ width: "100%", padding: "13px 44px 13px 18px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 18, outline: "none", fontFamily: "inherit", transition: "border-color .3s", boxSizing: "border-box" }}
-              onFocus={e => e.target.style.borderColor = T.gold + "66"} onBlur={e => e.target.style.borderColor = T.border} />
-            {query && (
-              <button onClick={() => { setQuery(""); setLocalResults([]); setTmdbResults([]); setSearchError(""); setShowAllLocal(false); }}
-                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: T.border, border: "none", color: T.muted, fontSize: 16, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 1, transition: "all .2s" }}
-                onMouseEnter={e => { e.currentTarget.style.background = T.red + "44"; e.currentTarget.style.color = T.red; }}
-                onMouseLeave={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.muted; }}>×</button>
-            )}
-          </div>
-          {searchMode === "tmdb" && (
-            <button onClick={doTmdbSearch} disabled={loading || !query.trim()}
-              style={{ padding: "13px 22px", background: loading ? T.surface : T.gold, border: "none", borderRadius: 10, color: loading ? T.muted : T.bg, fontWeight: 700, fontSize: 17, cursor: loading ? "wait" : "pointer", opacity: !query.trim() ? .5 : 1, whiteSpace: "nowrap" }}>
-              {loading ? "..." : "Buscar"}
-            </button>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 4 }}>
-            <Btn active={searchMode === "local"} onClick={() => { setSearchMode("local"); setTmdbResults([]); setSearchError(""); if (query.length >= 2) doLocalSearch(query); }}>Local ({DB.length})</Btn>
-            <Btn active={searchMode === "tmdb"} color={tmdb.hasApiKey() ? T.gold : T.dim} onClick={() => { setSearchMode("tmdb"); setLocalResults([]); }}>TMDb {tmdb.hasApiKey() ? "✓" : "🔑"}</Btn>
-          </div>
-          <button onClick={() => setShowManual(!showManual)} style={{ background: "none", border: "none", color: T.muted, fontSize: 15, cursor: "pointer", textDecoration: "underline", padding: 0 }}>{showManual ? "Fechar" : "+ Manual"}</button>
-          {searchMode === "local" && <button onClick={() => { setShowAllLocal(!showAllLocal); setLocalResults(showAllLocal ? [] : DB); setQuery(""); }} style={{ background: "none", border: "none", color: T.gold, fontSize: 15, cursor: "pointer", textDecoration: "underline", padding: 0 }}>{showAllLocal ? "Fechar catálogo" : `Ver todos (${DB.length})`}</button>}
-        </div>
-      </div>
-
-      {/* MANUAL ADD */}
-      {showManual && <div style={{ padding: 18, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20, marginTop: 12, animation: "fadeUp .3s ease" }}>
-        <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Adicionar Manualmente</div>
-        <input value={manTitle} onChange={e => setManTitle(e.target.value)} placeholder="Título *" onKeyDown={e => e.key === "Enter" && addManual()} style={IS} />
-        <div style={{ display: "flex", gap: 8 }}><input value={manYear} onChange={e => setManYear(e.target.value)} placeholder="Ano" style={{ ...IS, flex: 1 }} /><input value={manDirector} onChange={e => setManDirector(e.target.value)} placeholder="Diretor" style={{ ...IS, flex: 2 }} /></div>
-        <input value={manGenres} onChange={e => setManGenres(e.target.value)} placeholder="Gêneros (vírgula)" style={{ ...IS, marginBottom: 12 }} />
-        <button onClick={addManual} disabled={!manTitle.trim()} style={{ padding: "8px 20px", background: T.gold, border: "none", borderRadius: 6, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer", opacity: !manTitle.trim() ? .5 : 1 }}>Adicionar</button>
-      </div>}
-
-      {/* LOADING */}
-      {previewLoading && <Spinner text="Carregando detalhes..." />}
-      {loading && <Spinner text="Buscando no TMDb..." />}
-      {searchError && !loading && <div style={{ padding: 16, textAlign: "center", color: T.red, fontSize: 16, background: T.red + "11", borderRadius: 8, marginTop: 12, marginBottom: 16 }}>{searchError}</div>}
-
-      {/* LOCAL RESULTS */}
-      {searchMode === "local" && (localResults.length > 0 || showAllLocal) && <div style={{ marginTop: 16, marginBottom: 28 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase" }}>{localResults.length} resultado{localResults.length !== 1 ? "s" : ""} <span style={{ fontSize: 13, fontWeight: 400, opacity: .7 }}>— clique para detalhes</span></div>
-          {showAllLocal && <div style={{ display: "flex", gap: 6 }}>
-            {[["title", "A-Z"], ["rating", "Nota ↓"], ["year", "Ano ↓"]].map(([k, label]) => (
-              <button key={k} onClick={() => { setLocalSort(k); setLocalResults(prev => [...prev].sort(k === "rating" ? (a, b) => (b.rating || 0) - (a.rating || 0) : k === "year" ? (a, b) => (b.year || 0) - (a.year || 0) : (a, b) => (a.title || "").localeCompare(b.title || ""))); }}
-                style={{ padding: "4px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", border: `1px solid ${localSort === k ? T.gold + "66" : T.border}`, background: localSort === k ? T.gold + "18" : "transparent", color: localSort === k ? T.gold : T.muted, transition: "all .2s" }}>{label}</button>
-            ))}
-          </div>}
-        </div>
-        {localResults.map((m, i) => {
-          const inCat = catalog.some(c => c.title === m.title && c.year === m.year);
-          return <div key={i} onClick={() => previewLocal(m)} style={{ display: "flex", gap: 16, padding: "12px 16px", background: T.card, border: `1px solid ${inCat ? T.gold + "44" : T.border}`, borderRadius: 10, marginBottom: 8, animation: `fadeUp .35s ease ${i * .05}s both`, alignItems: "center", cursor: "pointer", transition: "all .2s" }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateX(4px)"; e.currentTarget.style.borderColor = T.gold + "66"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = inCat ? T.gold + "44" : T.border; }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({m.year})</span></div>
-              <div style={{ fontSize: 15, color: T.muted, marginTop: 3 }}>{m.director && <span style={{ color: T.gold }}>{m.director}</span>}{m.runtime > 0 && <span> · {m.runtime}min</span>}{m.rating > 0 && <span> · ★{Number(m.rating).toFixed(1)}</span>}</div>
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5 }}>{(m.genres || []).slice(0, 4).map(g => <span key={g} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 12, background: T.gold + "15", color: T.goldDim, border: `1px solid ${T.gold}22` }}>{g}</span>)}</div>
-            </div>
-            <button onClick={(e) => { e.stopPropagation(); addFromLocal(m); }} disabled={inCat} style={{ padding: "8px 16px", border: `1px solid ${inCat ? T.green + "44" : T.gold + "44"}`, borderRadius: 6, fontSize: 15, fontWeight: 600, cursor: inCat ? "default" : "pointer", background: inCat ? T.green + "11" : "transparent", color: inCat ? T.green : T.gold, whiteSpace: "nowrap", flexShrink: 0 }}>{inCat ? "✓" : "+ Adicionar"}</button>
-            <span style={{ color: T.dim, fontSize: 18, flexShrink: 0 }}>›</span>
-          </div>;
-        })}
-      </div>}
-
-      {/* TMDB RESULTS */}
-      {searchMode === "tmdb" && !loading && tmdbResults.length > 0 && <div style={{ marginTop: 16, marginBottom: 28 }}>
-        <div style={{ fontSize: 15, color: T.dim, marginBottom: 10, letterSpacing: ".1em", textTransform: "uppercase" }}>{tmdbResults.length} resultado{tmdbResults.length !== 1 ? "s" : ""} do TMDb <span style={{ fontSize: 13, fontWeight: 400, opacity: .7 }}>— clique para detalhes</span></div>
-        {tmdbResults.map((m, i) => {
-          const yr = (m.release_date || "").slice(0, 4);
-          const inCat = catalog.some(c => c.title === m.title && c.year === yr);
-          return <div key={m.id} onClick={() => previewTmdb(m)} style={{ display: "flex", gap: 14, padding: "12px 16px", background: T.card, border: `1px solid ${inCat ? T.gold + "44" : T.border}`, borderRadius: 10, marginBottom: 8, animation: `fadeUp .35s ease ${i * .05}s both`, alignItems: "center", cursor: "pointer", transition: "all .2s" }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateX(4px)"; e.currentTarget.style.borderColor = T.gold + "66"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = inCat ? T.gold + "44" : T.border; }}>
-            {m.poster_path && <img src={tmdb.posterUrl(m.poster_path, "w92")} alt="" style={{ width: 46, height: 69, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={e => e.target.style.display = "none"} />}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({yr})</span></div>
-              {m.vote_average > 0 && <div style={{ fontSize: 15, color: T.gold, marginTop: 2 }}>★ {m.vote_average.toFixed(1)}</div>}
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>{tmdb.genreNames(m.genre_ids).slice(0, 4).map(g => <span key={g} style={{ fontSize: 13, padding: "2px 8px", borderRadius: 12, background: T.gold + "15", color: T.goldDim, border: `1px solid ${T.gold}22` }}>{g}</span>)}</div>
-            </div>
-            <button onClick={(e) => { e.stopPropagation(); addFromTmdb(m); }} disabled={inCat} style={{ padding: "8px 16px", border: `1px solid ${inCat ? T.green + "44" : T.gold + "44"}`, borderRadius: 6, fontSize: 15, fontWeight: 600, cursor: inCat ? "default" : "pointer", background: inCat ? T.green + "11" : "transparent", color: inCat ? T.green : T.gold, whiteSpace: "nowrap", flexShrink: 0 }}>{inCat ? "✓" : "+ Adicionar"}</button>
-            <span style={{ color: T.dim, fontSize: 18, flexShrink: 0 }}>›</span>
-          </div>;
-        })}
-      </div>}
-
-      {/* FILTERS */}
-      {catalog.length > 0 && !showingSearch && <div style={{ marginBottom: 20, marginTop: 16, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        {[["all", "Todos"], ["quero_ver", "Quero Ver"], ["assistido", "Assistidos"], ["abandonado", "Abandonados"]].map(([v, l]) => <Btn key={v} active={filterStatus === v} onClick={() => setFilterStatus(v)}>{l}</Btn>)}
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: "6px 10px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, color: T.muted, fontSize: 14, outline: "none" }}>
-          <option value="added">Recentes</option><option value="rating">Nota</option><option value="year">Ano</option><option value="title">Título</option>
-        </select>
-        {allTags.length > 0 && <select value={filterTag} onChange={e => setFilterTag(e.target.value)} style={{ padding: "6px 10px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, color: T.muted, fontSize: 14, outline: "none" }}>
-          <option value="">Tags</option>{allTags.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>}
-      </div>}
-
-      {/* CATALOG GRID */}
-      {!showingSearch && (catalog.length === 0 ?
-        <div style={{ textAlign: "center", padding: "60px 20px", color: T.dim }}><div style={{ fontSize: 44, marginBottom: 12, opacity: .3 }}>🎬</div><div style={{ fontSize: 18, color: T.muted }}>Catálogo vazio</div><div style={{ fontSize: 16, marginTop: 6 }}>Busque ou adicione manualmente</div></div>
-        : <>
-          {/* Fetch posters button */}
-          {tmdb.hasApiKey() && catalog.some(m => !m.poster_path) && (
-            <div style={{ marginTop: 8, marginBottom: 12 }}>
-              <button onClick={async () => {
-                flash("Buscando pôsteres...", "info");
-                await tmdb.fetchMissingPosters(catalog, (id, data) => update(id, data));
-                flash("Pôsteres atualizados!");
-              }} style={{ background: T.gold + "18", border: `1px solid ${T.gold}44`, borderRadius: 6, color: T.gold, fontSize: 14, fontWeight: 600, padding: "6px 14px", cursor: "pointer", transition: "all .25s" }}>
-                🖼 Buscar pôsteres ({catalog.filter(m => !m.poster_path).length} sem capa)
-              </button>
-            </div>
-          )}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 14, marginTop: 8 }}>
-            {filtered.map((m, i) => (
-              <div key={m.id} onClick={() => { setSelected(m); setView("detail"); setStreaming(null); }}
-                style={{ cursor: "pointer", borderRadius: 10, overflow: "hidden", transition: "all .3s", animation: `fadeUp .4s ease ${Math.min(i * .03, .5)}s both`, position: "relative" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px) scale(1.03)"; e.currentTarget.style.boxShadow = `0 16px 40px rgba(0,0,0,.6), 0 0 30px ${T.goldGlow}`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
-                {/* Poster or Fallback */}
-                <div style={{ width: "100%", aspectRatio: "2/3", position: "relative", overflow: "hidden" }}>
-                  {m.poster_path ? (
-                    <img src={tmdb.posterUrl(m.poster_path)} alt={m.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      onError={e => { e.target.onerror = null; e.target.style.display = "none"; if (e.target.nextSibling) e.target.nextSibling.style.display = "flex"; }} />
-                  ) : null}
-                  {/* Fallback — styled title card */}
-                  <div style={{
-                    width: "100%", height: "100%", position: m.poster_path ? "absolute" : "relative",
-                    top: 0, left: 0, display: m.poster_path ? "none" : "flex",
-                    flexDirection: "column", justifyContent: "flex-end", padding: 14,
-                    background: `linear-gradient(135deg, ${T.surface} 0%, #1a1525 50%, #12101a 100%)`,
-                  }}>
-                    <div style={{ fontSize: 14, color: T.gold, letterSpacing: ".08em", fontWeight: 600, textTransform: "uppercase", marginBottom: 4, opacity: .7 }}>{m.year}</div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: T.text, lineHeight: 1.25, marginBottom: 6 }}>{m.title}</div>
-                    <div style={{ fontSize: 14, color: T.muted }}>{m.director}</div>
-                    {m.rating > 0 && <div style={{ fontSize: 14, color: T.gold, marginTop: 4 }}>★ {Number(m.rating).toFixed(1)}</div>}
-                  </div>
-
-                  {/* Status badge */}
-                  <div style={{
-                    position: "absolute", top: 8, right: 8, padding: "3px 8px", borderRadius: 4,
-                    fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
-                    background: m.status === "assistido" ? T.green + "dd" : m.status === "abandonado" ? T.red + "dd" : T.blue + "dd",
-                    color: "#fff", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
-                  }}>
-                    {m.status === "assistido" ? "VISTO" : m.status === "abandonado" ? "DROP" : "LISTA"}
-                  </div>
-
-                  {/* Rating badge */}
-                  {m.myRating > 0 && (
-                    <div style={{
-                      position: "absolute", bottom: 8, left: 8, display: "flex", alignItems: "center", gap: 3,
-                      background: "rgba(0,0,0,.75)", padding: "3px 8px", borderRadius: 4,
-                      backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
-                    }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={T.gold} /></svg>
-                      <span style={{ fontSize: 14, color: T.gold, fontWeight: 700 }}>{m.myRating}</span>
-                    </div>
-                  )}
-
-                  {/* Tags badge */}
-                  {(m.tags || []).length > 0 && (
-                    <div style={{
-                      position: "absolute", bottom: 8, right: 8,
-                      background: "rgba(0,0,0,.65)", padding: "2px 7px", borderRadius: 4,
-                      fontSize: 12, color: T.goldDim, backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
-                    }}>
-                      {m.tags[0]}{m.tags.length > 1 ? ` +${m.tags.length - 1}` : ""}
-                    </div>
-                  )}
-
-                  {/* Hover overlay with info — only for poster cards */}
-                  {m.poster_path && (
-                    <div className="poster-overlay" style={{
-                      position: "absolute", bottom: 0, left: 0, right: 0,
-                      background: "linear-gradient(transparent 0%, rgba(0,0,0,.9) 100%)",
-                      padding: "50px 12px 10px", pointerEvents: "none"
-                    }}>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: "#fff", lineHeight: 1.2 }}>{m.title}</div>
-                      <div style={{ fontSize: 14, color: T.muted, marginTop: 2 }}>{m.year}{m.director ? ` · ${m.director}` : ""}</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Title below poster for poster cards */}
-                {m.poster_path && (
-                  <div style={{ padding: "8px 10px 10px", background: T.card }}>
-                    <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</div>
-                    <div style={{ fontSize: 14, color: T.dim, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.year}{m.director ? ` · ${m.director}` : ""}</div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    </>
   );
 }
