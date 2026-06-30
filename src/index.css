@@ -8,8 +8,8 @@ html {
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
-  background: #0a0a0f;
-  color: #e8e4dc;
+  background: #0a0a0b;
+  color: #e9e2d4;
   min-height: 100vh;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
@@ -29,15 +29,16 @@ body {
 
 button, a, [role="button"] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
-::selection { background: rgba(212, 168, 83, 0.3); }
+::selection { background: rgba(212, 168, 83, 0.28); color: #fff; }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0a0a0f; }
-::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0a0a0b; }
+::-webkit-scrollbar-thumb { background: #2e2c36; }
+::-webkit-scrollbar-thumb:hover { background: #d4a853; }
 
 input, textarea, select, button { font-family: inherit; font-size: inherit; }
 input, textarea { font-size: 16px; }
+input::placeholder { color: #5a564e; font-style: italic; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
@@ -69,4 +70,72 @@ input, textarea { font-size: 16px; }
   *:hover > div > div > .poster-overlay {
     opacity: 1;
   }
+}
+
+/* ═══════════════════ CINAPSE · "The Print" ═══════════════════ */
+/* grão de película por cima de tudo (sutil) */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 70; pointer-events: none; opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* bordas de película (sprockets) — a assinatura */
+.cnp-edge {
+  position: fixed; top: 0; bottom: 0; width: 26px; z-index: 40; pointer-events: none;
+  background-color: #0f0e12;
+  background-image: repeating-linear-gradient(to bottom, #0a0a0b 0 13px, transparent 13px 32px);
+  background-size: 13px 100%; background-position: center; background-repeat: repeat-y;
+  border-inline: 1px solid #000;
+  box-shadow: inset 0 0 16px rgba(0,0,0,.85);
+}
+.cnp-edge-l { left: 0; } .cnp-edge-r { right: 0; }
+.cnp-code {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  writing-mode: vertical-rl; text-orientation: mixed; white-space: nowrap;
+  font-family: "Space Mono", monospace; font-size: 7.5px; letter-spacing: .3em;
+  color: #7d6428; opacity: .6; animation: cnpEdgeRun 30s linear infinite;
+}
+@keyframes cnpEdgeRun { from { top: -100%; } to { top: 0; } }
+@media (max-width: 680px) { .cnp-edge { width: 16px; } .cnp-code { font-size: 7px; } }
+
+/* leader / contagem na carga */
+.cnp-leader {
+  position: fixed; inset: 0; z-index: 90; background: #0a0a0b;
+  display: grid; place-items: center; animation: cnpLeaderOut .5s ease 2.45s forwards;
+}
+.cnp-gate {
+  width: 150px; height: 150px; border-radius: 50%; position: relative;
+  border: 1px solid #2e2c36; display: grid; place-items: center;
+}
+.cnp-gate::before {
+  content: ""; position: absolute; inset: -1px; border-radius: 50%;
+  background: conic-gradient(from -90deg, #d4a853 0 25%, transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: cnpSweep .8s linear 3; opacity: .9;
+}
+.cnp-gate .cnp-x { position: absolute; width: 150px; height: 1px; background: #2e2c36; }
+.cnp-gate::after { content: ""; position: absolute; width: 1px; height: 150px; background: #2e2c36; }
+.cnp-num { font-family: "Fraunces", Georgia, serif; font-size: 76px; font-weight: 600; color: #e9e2d4; position: relative; z-index: 1; }
+@keyframes cnpSweep { to { transform: rotate(360deg); } }
+@keyframes cnpLeaderOut { to { opacity: 0; visibility: hidden; } }
+
+/* revelar cada frame como uma cópia sendo "batida" */
+@keyframes cnpStrike {
+  from { opacity: 0; transform: translateY(10px); filter: blur(6px); }
+  to { opacity: 1; transform: translateY(0); filter: none; }
+}
+/* caret piscando da busca */
+@keyframes cnpBlink { 50% { opacity: 0; } }
+/* luz do projetor cruzando o frame no hover */
+@keyframes cnpGate {
+  0% { transform: translateX(-120%) skewX(-12deg); opacity: 0; }
+  40%, 60% { opacity: 1; }
+  100% { transform: translateX(320%) skewX(-12deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cnp-leader { display: none !important; }
+  .cnp-code, body::after { animation: none !important; }
 }

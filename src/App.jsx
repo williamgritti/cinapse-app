@@ -5,10 +5,13 @@ import * as store from "./storage";
 import MarketingPlan from "./MarketingPlan";
 
 const T = {
-  bg: "#0a0a0f", surface: "#12121a", card: "#16161f", border: "#2a2a3a",
-  gold: "#d4a853", goldDim: "#a8843f", goldGlow: "rgba(212,168,83,0.15)",
-  red: "#c44040", green: "#4a9e6a", blue: "#5a7ec4", purple: "#8b6fc0",
-  text: "#e8e4dc", muted: "#8a8696", dim: "#5a5668",
+  bg: "#0a0a0b", surface: "#121116", card: "#16151b", border: "#23222a",
+  gold: "#d4a853", goldDim: "#7d6428", goldGlow: "rgba(212,168,83,0.16)",
+  red: "#a23423", green: "#6b8754", blue: "#5a7088", purple: "#8b6fc0",
+  text: "#e9e2d4", muted: "#8d8779", dim: "#5a564e",
+  // "The Print" — apelidos e fontes
+  bone: "#e9e2d4", ash: "#8d8779", line2: "#2e2c36", oxblood: "#a23423",
+  serif: "'Fraunces', Georgia, serif", mono: "'Space Mono', ui-monospace, monospace",
 };
 
 const TAGS = ["Cinapse","Novo Extremismo Francês","Body Horror","Slow Burn","Arthouse","Asiático Extremo","Psicológico","Exploitation","Folk Horror","Giallo","Transgressor","Festival","Cult","Clássico","Obra-prima"];
@@ -70,7 +73,7 @@ function Spinner({ text }) {
 }
 
 const Btn = ({ children, active, color, onClick, disabled, style: s }) => (
-  <button onClick={onClick} disabled={disabled} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: disabled ? "default" : "pointer", border: `1px solid ${active ? (color || T.gold) + "66" : T.border}`, background: active ? (color || T.gold) + "18" : "transparent", color: active ? (color || T.gold) : T.muted, transition: "all .25s", opacity: disabled ? .5 : 1, ...s }}>{children}</button>
+  <button onClick={onClick} disabled={disabled} style={{ padding: "7px 12px", borderRadius: 2, fontFamily: "'Space Mono', ui-monospace, monospace", fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase", cursor: disabled ? "default" : "pointer", border: `1px solid ${active ? (color || T.gold) : T.line2}`, background: active ? (color || T.gold) : "transparent", color: active ? "#0a0a0b" : T.muted, fontWeight: active ? 700 : 400, transition: "all .2s", opacity: disabled ? .5 : 1, ...s }}>{children}</button>
 );
 
 const IS = { width: "100%", padding: "10px 14px", background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 17, outline: "none", boxSizing: "border-box", marginBottom: 8, fontFamily: "inherit" };
@@ -346,7 +349,7 @@ export default function App() {
     <div style={{ display: "flex", gap: 6, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 12, flexWrap: "wrap" }}>
       {[["main", "Catálogo"], ["watchlists", "Watchlists"], ["checklists", "Listas"], ["stats", "Stats"], ["settings", "⚙"]].map(([v, l]) => (
         <button key={v} onClick={() => { setView(v); resetView(); }}
-          style={{ padding: "8px 16px", borderRadius: 6, fontSize: 15, fontWeight: 600, cursor: "pointer", border: "none", background: view === v ? T.goldGlow : "transparent", color: view === v ? T.gold : T.muted, transition: "all .25s" }}>{l}</button>
+          style={{ padding: "6px 14px 6px 2px", fontFamily: T.mono, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase", cursor: "pointer", border: "none", background: "transparent", color: view === v ? T.bone : T.muted, position: "relative", transition: "color .25s" }}>{l}{view === v && <span style={{ position: "absolute", right: 0, top: 4, color: T.gold, fontSize: 7 }}>●</span>}</button>
       ))}
     </div>
   );
@@ -770,10 +773,16 @@ export default function App() {
     <div style={{ maxWidth: 860, margin: "0 auto", padding: "24px 20px" }}>
       {notif && <div style={{ position: "fixed", top: "max(20px, env(safe-area-inset-top))", right: "max(20px, env(safe-area-inset-right))", zIndex: 100, padding: "12px 20px", borderRadius: 8, fontSize: 16, fontWeight: 600, background: notif.type === "ok" ? T.green + "dd" : notif.type === "info" ? T.blue + "dd" : T.red + "dd", color: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,.4)", animation: "fadeUp .3s ease" }}>{notif.msg}</div>}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 36, color: T.gold, letterSpacing: ".08em", fontWeight: 300, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>CINAPSE</div>
-          <div style={{ fontSize: 14, color: T.dim, letterSpacing: ".2em", textTransform: "uppercase" }}>{catalog.length} filme{catalog.length !== 1 ? "s" : ""} · {DB.length} no banco</div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: ".42em", textTransform: "uppercase", color: T.dim, marginBottom: 12 }}>Private Print · Acervo de Repertório</div>
+        <div style={{ fontFamily: T.serif, fontSize: "clamp(44px, 12vw, 76px)", lineHeight: .85, fontWeight: 600, color: T.bone, letterSpacing: ".01em" }}>CINAPSE<span style={{ color: T.gold }}>.</span></div>
+        <div style={{ height: 1, background: T.border, margin: "18px 0 12px", position: "relative" }}>
+          <span style={{ position: "absolute", left: 0, top: -3, width: 7, height: 7, border: `1px solid ${T.goldDim}` }} />
+          <span style={{ position: "absolute", right: 0, top: -3, width: 7, height: 7, border: `1px solid ${T.goldDim}` }} />
+        </div>
+        <div style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: ".18em", color: T.muted, display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <span><b style={{ color: T.gold, fontWeight: 700 }}>{String(catalog.length).padStart(3, "0")}</b> TÍTULOS</span>
+          <span><b style={{ color: T.gold, fontWeight: 700 }}>{DB.length}</b> NO COFRE</span>
         </div>
       </div>
       <TabBar />
@@ -785,8 +794,8 @@ export default function App() {
             <input value={query} onChange={e => handleQueryChange(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && searchMode === "tmdb") doTmdbSearch(); }}
               placeholder={searchMode === "local" ? "Buscar no banco local..." : "Buscar no TMDb... (Enter)"}
-              style={{ width: "100%", padding: "13px 44px 13px 18px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 18, outline: "none", fontFamily: "inherit", transition: "border-color .3s", boxSizing: "border-box" }}
-              onFocus={e => e.target.style.borderColor = T.gold + "66"} onBlur={e => e.target.style.borderColor = T.border} />
+              style={{ width: "100%", padding: "12px 44px 12px 2px", background: "transparent", border: "none", borderBottom: `1px solid ${T.line2}`, borderRadius: 0, color: T.bone, fontSize: 19, outline: "none", fontFamily: T.serif, transition: "border-color .3s", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderBottomColor = T.gold} onBlur={e => e.target.style.borderBottomColor = T.line2} />
             {query && (
               <button onClick={() => { setQuery(""); setLocalResults([]); setTmdbResults([]); setSearchError(""); setShowAllLocal(false); }}
                 style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: T.border, border: "none", color: T.muted, fontSize: 16, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 1, transition: "all .2s" }}
@@ -900,44 +909,43 @@ export default function App() {
               </button>
             </div>
           )}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 14, marginTop: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "26px 20px", marginTop: 14 }}>
             {filtered.map((m, i) => (
               <div key={m.id} onClick={() => { setSelected(m); setView("detail"); setStreaming(null); }}
-                style={{ cursor: "pointer", borderRadius: 10, overflow: "hidden", transition: "all .3s", animation: `fadeUp .4s ease ${Math.min(i * .03, .5)}s both`, position: "relative" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px) scale(1.03)"; e.currentTarget.style.boxShadow = `0 16px 40px rgba(0,0,0,.6), 0 0 30px ${T.goldGlow}`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
-                {/* Poster or Fallback */}
-                <div style={{ width: "100%", aspectRatio: "2/3", position: "relative", overflow: "hidden" }}>
+                style={{ cursor: "pointer", position: "relative", transition: "transform .3s", animation: `cnpStrike .5s ease ${Math.min(i * .04, .6)}s both` }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; const p = e.currentTarget.firstElementChild; if (p) p.style.borderColor = T.gold; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; const p = e.currentTarget.firstElementChild; if (p) p.style.borderColor = T.line2; }}>
+                {/* Frame — pôster ou fallback */}
+                <div style={{ width: "100%", aspectRatio: "2/3", position: "relative", overflow: "hidden", border: `1px solid ${T.line2}`, transition: "border-color .3s" }}>
+                  <span style={{ position: "absolute", top: 8, left: 8, zIndex: 3, fontFamily: T.mono, fontSize: 10, letterSpacing: ".08em", color: T.gold, background: "rgba(8,8,9,.72)", padding: "2px 6px", border: `1px solid ${T.goldDim}` }}>№ {String(i + 1).padStart(3, "0")}</span>
                   {m.poster_path ? (
                     <img src={tmdb.posterUrl(m.poster_path)} alt={m.title}
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                       onError={e => { e.target.onerror = null; e.target.style.display = "none"; if (e.target.nextSibling) e.target.nextSibling.style.display = "flex"; }} />
                   ) : null}
-                  {/* Fallback — styled title card */}
+                  {/* Fallback — cartela de título quando não há pôster */}
                   <div style={{
                     width: "100%", height: "100%", position: m.poster_path ? "absolute" : "relative",
                     top: 0, left: 0, display: m.poster_path ? "none" : "flex",
-                    flexDirection: "column", justifyContent: "flex-end", padding: 14,
-                    background: `linear-gradient(135deg, ${T.surface} 0%, #1a1525 50%, #12101a 100%)`,
+                    flexDirection: "column", justifyContent: "flex-end", padding: 16,
+                    background: "linear-gradient(160deg, #17141a 0%, #0c0b0f 100%)",
                   }}>
-                    <div style={{ fontSize: 14, color: T.gold, letterSpacing: ".08em", fontWeight: 600, textTransform: "uppercase", marginBottom: 4, opacity: .7 }}>{m.year}</div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: T.text, lineHeight: 1.25, marginBottom: 6 }}>{m.title}</div>
-                    <div style={{ fontSize: 14, color: T.muted }}>{m.director}</div>
-                    {m.rating > 0 && <div style={{ fontSize: 14, color: T.gold, marginTop: 4 }}>★ {Number(m.rating).toFixed(1)}</div>}
+                    <div style={{ fontFamily: T.mono, fontSize: 11, color: T.goldDim, letterSpacing: ".14em", marginBottom: 8 }}>{m.year}</div>
+                    <div style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 600, color: T.bone, lineHeight: 1.08, marginBottom: 8 }}>{m.title}</div>
+                    <div style={{ fontFamily: T.mono, fontSize: 10, color: T.ash, letterSpacing: ".06em", textTransform: "uppercase" }}>{m.director}</div>
+                    {m.myRating > 0 && <div style={{ fontFamily: T.mono, fontSize: 11, color: T.gold, marginTop: 8, letterSpacing: ".1em" }}>★ {m.myRating}/5</div>}
                   </div>
 
-                  {/* Status badge */}
-                  <div style={{
-                    position: "absolute", top: 8, right: 8, padding: "3px 8px", borderRadius: 4,
-                    fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
-                    background: m.status === "assistido" ? T.green + "dd" : m.status === "abandonado" ? T.red + "dd" : T.blue + "dd",
-                    color: "#fff", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
-                  }}>
-                    {m.status === "assistido" ? "VISTO" : m.status === "abandonado" ? "DROP" : "LISTA"}
-                  </div>
+                  {/* Cue mark — marca de troca de bobina (estado) */}
+                  <span title={m.status === "assistido" ? "Visto" : m.status === "abandonado" ? "Abandonado" : "Na lista"} style={{
+                    position: "absolute", top: 8, right: 8, zIndex: 3, width: 13, height: 13, borderRadius: "50%",
+                    border: `1.5px solid ${m.status === "assistido" ? T.gold : m.status === "abandonado" ? T.oxblood : T.ash}`,
+                    background: m.status === "assistido" ? T.gold : m.status === "abandonado" ? T.oxblood : "transparent",
+                    boxShadow: "0 1px 4px rgba(0,0,0,.6)"
+                  }} />
 
-                  {/* Rating badge */}
-                  {m.myRating > 0 && (
+                  {/* Rating badge — só sobre pôster real (na cartela a nota entra no texto) */}
+                  {m.poster_path && m.myRating > 0 && (
                     <div style={{
                       position: "absolute", bottom: 8, left: 8, display: "flex", alignItems: "center", gap: 3,
                       background: "rgba(0,0,0,.75)", padding: "3px 8px", borderRadius: 4,
@@ -974,9 +982,9 @@ export default function App() {
 
                 {/* Title below poster for poster cards */}
                 {m.poster_path && (
-                  <div style={{ padding: "8px 10px 10px", background: T.card }}>
-                    <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</div>
-                    <div style={{ fontSize: 14, color: T.dim, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.year}{m.director ? ` · ${m.director}` : ""}</div>
+                  <div style={{ padding: "10px 2px 0" }}>
+                    <div style={{ fontFamily: T.serif, fontSize: 16, fontWeight: 600, lineHeight: 1.12, color: T.bone, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</div>
+                    <div style={{ fontFamily: T.mono, fontSize: 10, color: T.ash, letterSpacing: ".06em", textTransform: "uppercase", marginTop: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.year}{m.director ? ` · ${m.director}` : ""}</div>
                   </div>
                 )}
               </div>
