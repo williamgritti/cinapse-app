@@ -70,7 +70,7 @@ function Spinner({ text }) {
 }
 
 const Btn = ({ children, active, color, onClick, disabled, style: s }) => (
-  <button onClick={onClick} disabled={disabled} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: disabled ? "default" : "pointer", border: `1px solid ${active ? (color || T.gold) + "66" : T.border}`, background: active ? (color || T.gold) + "18" : "transparent", color: active ? (color || T.gold) : T.muted, transition: "all .25s", opacity: disabled ? .5 : 1, ...s }}>{children}</button>
+  <button onClick={onClick} disabled={disabled} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: disabled ? "default" : "pointer", border: `1px solid ${active ? (color || T.gold) + "66" : T.border}`, background: active ? (color || T.gold) + "18" : "transparent", color: active ? (color || T.gold) : T.muted, transition: "all .25s", opacity: disabled ? .5 : 1, boxShadow: active ? `0 0 16px -5px ${(color || T.gold)}aa` : "none", ...s }}>{children}</button>
 );
 
 const IS = { width: "100%", padding: "10px 14px", background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, fontSize: 17, outline: "none", boxSizing: "border-box", marginBottom: 8, fontFamily: "inherit" };
@@ -345,7 +345,7 @@ export default function App() {
   const TabBar = () => (
     <div style={{ display: "flex", gap: 6, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 12, flexWrap: "wrap" }}>
       {[["main", "Catálogo"], ["watchlists", "Watchlists"], ["checklists", "Listas"], ["stats", "Stats"], ["settings", "⚙"]].map(([v, l]) => (
-        <button key={v} onClick={() => { setView(v); resetView(); }}
+        <button key={v} onClick={() => { setView(v); resetView(); }} className={view === v ? "cnp-tab-active" : undefined}
           style={{ padding: "8px 16px", borderRadius: 6, fontSize: 15, fontWeight: 600, cursor: "pointer", border: "none", background: view === v ? T.goldGlow : "transparent", color: view === v ? T.gold : T.muted, transition: "all .25s" }}>{l}</button>
       ))}
     </div>
@@ -772,7 +772,7 @@ export default function App() {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 36, color: T.gold, letterSpacing: ".08em", fontWeight: 300, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>CINAPSE</div>
+          <div className="cnp-title" style={{ fontSize: 40, letterSpacing: ".1em", fontWeight: 600, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>CINAPSE</div>
           <div style={{ fontSize: 14, color: T.dim, letterSpacing: ".2em", textTransform: "uppercase" }}>{catalog.length} filme{catalog.length !== 1 ? "s" : ""} · {DB.length} no banco</div>
         </div>
       </div>
@@ -785,8 +785,8 @@ export default function App() {
             <input value={query} onChange={e => handleQueryChange(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && searchMode === "tmdb") doTmdbSearch(); }}
               placeholder={searchMode === "local" ? "Buscar no banco local..." : "Buscar no TMDb... (Enter)"}
-              style={{ width: "100%", padding: "13px 44px 13px 18px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 18, outline: "none", fontFamily: "inherit", transition: "border-color .3s", boxSizing: "border-box" }}
-              onFocus={e => e.target.style.borderColor = T.gold + "66"} onBlur={e => e.target.style.borderColor = T.border} />
+              style={{ width: "100%", padding: "13px 44px 13px 18px", background: "rgba(20,18,12,0.45)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid ${T.gold}22`, borderRadius: 12, color: T.text, fontSize: 18, outline: "none", fontFamily: "inherit", transition: "border-color .3s, box-shadow .3s", boxSizing: "border-box" }}
+              onFocus={e => { e.target.style.borderColor = T.gold + "66"; e.target.style.boxShadow = `0 0 24px -6px ${T.goldGlow}`; }} onBlur={e => { e.target.style.borderColor = T.gold + "22"; e.target.style.boxShadow = "none"; }} />
             {query && (
               <button onClick={() => { setQuery(""); setLocalResults([]); setTmdbResults([]); setSearchError(""); setShowAllLocal(false); }}
                 style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: T.border, border: "none", color: T.muted, fontSize: 16, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 1, transition: "all .2s" }}
@@ -900,12 +900,13 @@ export default function App() {
               </button>
             </div>
           )}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 14, marginTop: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 16, marginTop: 8, perspective: 1100 }}>
             {filtered.map((m, i) => (
-              <div key={m.id} onClick={() => { setSelected(m); setView("detail"); setStreaming(null); }}
-                style={{ cursor: "pointer", borderRadius: 10, overflow: "hidden", transition: "all .3s", animation: `fadeUp .4s ease ${Math.min(i * .03, .5)}s both`, position: "relative" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px) scale(1.03)"; e.currentTarget.style.boxShadow = `0 16px 40px rgba(0,0,0,.6), 0 0 30px ${T.goldGlow}`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+              <div key={m.id} onClick={() => { setSelected(m); setView("detail"); setStreaming(null); }} className="cnp-card"
+                style={{ cursor: "pointer", borderRadius: 12, overflow: "hidden", transition: "transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s, border-color .25s", animation: `fadeUp .4s ease ${Math.min(i * .03, .5)}s both`, position: "relative", transformStyle: "preserve-3d", border: `1px solid ${T.border}` }}
+                onMouseMove={e => { const r = e.currentTarget.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; e.currentTarget.style.transform = `translateY(-6px) rotateX(${(-y * 9).toFixed(2)}deg) rotateY(${(x * 9).toFixed(2)}deg) scale(1.04)`; e.currentTarget.style.boxShadow = `0 26px 56px rgba(0,0,0,.6), 0 0 38px ${T.goldGlow}`; e.currentTarget.style.borderColor = T.gold + "66"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = T.border; }}>
+                <div className="cnp-sheen" />
                 {/* Poster or Fallback */}
                 <div style={{ width: "100%", aspectRatio: "2/3", position: "relative", overflow: "hidden" }}>
                   {m.poster_path ? (
@@ -927,11 +928,11 @@ export default function App() {
                   </div>
 
                   {/* Status badge */}
-                  <div style={{
+                  <div className="cnp-badge" style={{
                     position: "absolute", top: 8, right: 8, padding: "3px 8px", borderRadius: 4,
                     fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
                     background: m.status === "assistido" ? T.green + "dd" : m.status === "abandonado" ? T.red + "dd" : T.blue + "dd",
-                    color: "#fff", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)"
+                    color: "#fff", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 4
                   }}>
                     {m.status === "assistido" ? "VISTO" : m.status === "abandonado" ? "DROP" : "LISTA"}
                   </div>

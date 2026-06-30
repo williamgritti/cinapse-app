@@ -8,7 +8,12 @@ html {
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
-  background: #0a0a0f;
+  background:
+    radial-gradient(1100px 720px at 14% -10%, rgba(212,168,83,0.10), transparent 60%),
+    radial-gradient(900px 700px at 96% 4%, rgba(168,132,63,0.08), transparent 55%),
+    radial-gradient(1000px 820px at 50% 122%, rgba(212,168,83,0.06), transparent 60%),
+    #0a0a0f;
+  background-attachment: fixed;
   color: #e8e4dc;
   min-height: 100vh;
   min-height: 100dvh;
@@ -38,6 +43,91 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; touch-act
 
 input, textarea, select, button { font-family: inherit; font-size: inherit; }
 input, textarea { font-size: 16px; }
+
+/* ===== Atmosfera "Cinapse 2.0": aurora dourada + grão + scanlines (puro CSS) ===== */
+body::before {
+  /* aurora dourada que respira/desloca atrás de tudo */
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 30% at 28% 26%, rgba(212,168,83,0.18), transparent 70%),
+    radial-gradient(34% 28% at 74% 62%, rgba(185,118,42,0.14), transparent 70%);
+  filter: blur(46px);
+  opacity: 0.6;
+  animation: aurora 22s ease-in-out infinite alternate;
+}
+body::after {
+  /* grão fino + scanlines em leve movimento por cima do fundo (não captura toque) */
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(0deg, rgba(212,168,83,0.10) 0px, transparent 1px, transparent 3px);
+  background-size: 120px 120px, 100% 4px;
+  animation: scanMove 7s linear infinite;
+}
+@keyframes scanMove {
+  to { background-position: 0 -120px, 0 -120px; }
+}
+@keyframes aurora {
+  0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
+  100% { transform: translate3d(4%, 3%, 0) scale(1.12); }
+}
+
+/* brilho holográfico reutilizável (varre e descansa) */
+@keyframes goldSheen {
+  0%, 70%, 100% { transform: translateX(-120%) rotate(10deg); opacity: 0; }
+  78%           { opacity: 1; }
+  86%, 99%      { transform: translateX(320%) rotate(10deg); opacity: 0; }
+}
+
+/* ===== Efeitos animados extra ===== */
+/* Título CINAPSE com brilho dourado deslizando */
+.cnp-title {
+  background: linear-gradient(100deg, #a8843f 0%, #d4a853 35%, #ffe7a6 50%, #d4a853 65%, #a8843f 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 0 22px rgba(212,168,83,0.35));
+  animation: titleShimmer 6s ease-in-out infinite;
+}
+@keyframes titleShimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* Badge de status com glow pulsante suave */
+.cnp-badge { animation: badgePulse 2.8s ease-in-out infinite; }
+@keyframes badgePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  50%     { box-shadow: 0 0 14px -2px rgba(255,255,255,0.45); }
+}
+
+/* Aba/botão ativo com respiro de glow dourado */
+.cnp-tab-active { animation: tabGlow 3.2s ease-in-out infinite; }
+@keyframes tabGlow {
+  0%,100% { box-shadow: 0 0 14px -6px rgba(212,168,83,0.5); }
+  50%     { box-shadow: 0 0 24px -4px rgba(212,168,83,0.85); }
+}
+
+/* Card: sheen diagonal varrendo (loop suave) + feedback de toque */
+.cnp-card { position: relative; }
+.cnp-card .cnp-sheen {
+  content: ""; position: absolute; top: -60%; left: 0; width: 45%; height: 220%;
+  pointer-events: none; z-index: 3;
+  background: linear-gradient(105deg, transparent, rgba(255,231,166,0.18) 48%, rgba(255,255,255,0.12) 52%, transparent);
+  transform: translateX(-120%) rotate(10deg);
+  animation: goldSheen 6.5s ease-in-out infinite;
+}
+.cnp-card:active { transform: scale(0.975) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cnp-title, .cnp-badge, .cnp-tab-active, .cnp-card .cnp-sheen, body::before, body::after { animation: none !important; }
+}
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
