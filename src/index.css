@@ -139,3 +139,25 @@ body::after {
   .cnp-leader { display: none !important; }
   .cnp-code, body::after { animation: none !important; }
 }
+
+.sync-panel {
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #39332b;
+  border-radius: 10px;
+  background: #121116;
+}
+.sync-panel h3 { margin: 0; color: #e9e2d4; font-size: 20px; }
+.sync-panel p, .sync-panel small { color: #b4aea1; line-height: 1.5; }
+.sync-panel label, .sync-panel small { display: block; margin: 8px 0; }
+.sync-panel button, .sync-notice {
+  padding: 9px 14px;
+  margin: 0 8px 8px 0;
+  background: transparent;
+  color: #d4a853;
+  border: 1px solid #7d6428;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+.sync-panel button:disabled { opacity: .5; }

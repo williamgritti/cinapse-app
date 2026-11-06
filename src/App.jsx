@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { DB, searchLocal } from "./db";
 import * as tmdb from "./tmdb";
-import * as store from "./storage";
+import { useCatalogSync } from "./useCatalogSync";
+import { isCatalogData } from "../shared/catalog";
 import MarketingPlan from "./MarketingPlan";
 
 const T = {
@@ -13,6 +14,11 @@ const T = {
   bone: "#e9e2d4", ash: "#8d8779", line2: "#2e2c36", oxblood: "#a23423",
   serif: "'Fraunces', Georgia, serif", mono: "'Space Mono', ui-monospace, monospace",
 };
+
+// Keep legacy numeric ids when reading a backup. New records can originate on several devices.
+function newId() {
+  return Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16).padStart(8, "0")).join("");
+}
 
 const TAGS = ["Cinapse","Novo Extremismo Francês","Body Horror","Slow Burn","Arthouse","Asiático Extremo","Psicológico","Exploitation","Folk Horror","Giallo","Transgressor","Festival","Cult","Clássico","Obra-prima"];
 const svcColors = { sub: T.green, rent: T.blue, buy: T.purple, free: T.gold };
@@ -81,9 +87,10 @@ const IS = { width: "100%", padding: "10px 14px", background: T.bg, border: `1px
 // ─── MAIN APP ───
 
 export default function App() {
-  const [catalog, setCatalog] = useState([]);
-  const [watchlists, setWatchlists] = useState([]);
-  const [checklists, setChecklists] = useState([]);
+  const { catalog, setCatalog, watchlists, setWatchlists, checklists, setChecklists, replaceData, sync } = useCatalogSync();
+  const cloudTmdb = sync.authenticated && sync.tmdbConfigured;
+  const tmdbAvailable = cloudTmdb || Boolean(tmdb.getApiKey());
+  const [password, setPassword] = useState("");
   const [view, setView] = useState("main");
   const [query, setQuery] = useState("");
   const [localResults, setLocalResults] = useState([]);
@@ -119,29 +126,21 @@ export default function App() {
   const debounceRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Load
   useEffect(() => {
-    const d = store.load();
-    setCatalog(d.catalog || []);
-    setWatchlists(d.watchlists || []);
-    setChecklists(d.checklists || []);
-  }, []);
-
-  // Save on change
-  useEffect(() => {
-    store.save({ catalog, watchlists, checklists });
-  }, [catalog, watchlists, checklists]);
+    tmdb.setCloudEnabled(cloudTmdb);
+    return () => tmdb.setCloudEnabled(false);
+  }, [cloudTmdb]);
 
   const flash = (msg, type = "ok") => { setNotif({ msg, type }); setTimeout(() => setNotif(null), 2500); };
 
   // ─── BACKUP / RESTORE ───
-  const handleExport = () => {
-    const data = { version: 1, exportedAt: new Date().toISOString(), catalog, watchlists, checklists, tmdbApiKey: tmdb.getApiKey() || "" };
+  const handleExport = (snapshot, suffix = "") => {
+    const data = { version: 1, exportedAt: new Date().toISOString(), ...snapshot };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `cinapse-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `cinapse-backup-${new Date().toISOString().slice(0, 10)}${suffix}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     flash("Backup exportado!");
@@ -154,20 +153,27 @@ export default function App() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
-        if (!data || typeof data !== "object" || !Array.isArray(data.catalog)) {
+        const snapshot = { catalog: data?.catalog, watchlists: data?.watchlists ?? [], checklists: data?.checklists ?? [] };
+        if (!isCatalogData(snapshot)) {
           flash("Arquivo inválido", "warn"); return;
         }
         const hasExisting = catalog.length > 0 || watchlists.length > 0 || checklists.length > 0;
-        if (hasExisting && !window.confirm("Isso vai substituir o catálogo, watchlists, listas e API key atuais. Continuar?")) return;
-        setCatalog(data.catalog || []);
-        setWatchlists(data.watchlists || []);
-        setChecklists(data.checklists || []);
-        if (data.tmdbApiKey) { tmdb.setApiKey(data.tmdbApiKey); setKeyInput(data.tmdbApiKey); }
+        if ((hasExisting || sync.authenticated) && !window.confirm(
+          sync.authenticated
+            ? "Substituir o catálogo e as listas sincronizados pelo conteúdo deste arquivo? A alteração chegará aos seus outros aparelhos."
+            : "Substituir o catálogo e as listas deste navegador pelo conteúdo do arquivo?"
+        )) return;
+        replaceData(snapshot);
+        if (!cloudTmdb && typeof data.tmdbApiKey === "string" && data.tmdbApiKey) {
+          tmdb.setApiKey(data.tmdbApiKey);
+          setKeyInput(data.tmdbApiKey);
+        }
         flash(`Importado: ${(data.catalog || []).length} filme${(data.catalog || []).length !== 1 ? "s" : ""}`);
       } catch (err) {
         flash("Erro ao ler arquivo: " + err.message, "warn");
       }
     };
+    reader.onerror = () => flash("Falha ao abrir o arquivo de backup.", "warn");
     reader.readAsText(file);
     e.target.value = "";
   };
@@ -178,12 +184,12 @@ export default function App() {
     else setLocalResults([]);
   };
 
-  const doTmdbSearch = async () => {
-    if (!query.trim()) return;
+  const doTmdbSearch = async (term = query) => {
+    if (!term.trim()) return;
     if (!tmdb.hasApiKey()) { flash("Configure a API key do TMDb nas configurações", "warn"); return; }
     setLoading(true); setSearchError(""); setTmdbResults([]);
     try {
-      const results = await tmdb.searchMovies(query);
+      const results = await tmdb.searchMovies(term);
       setTmdbResults(results);
       if (!results.length) setSearchError("Nenhum resultado no TMDb.");
     } catch (e) {
@@ -198,7 +204,7 @@ export default function App() {
     else {
       clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        if (val.length >= 3) doTmdbSearch();
+        if (val.length >= 3) doTmdbSearch(val);
       }, 600);
     }
   };
@@ -207,7 +213,7 @@ export default function App() {
   const addFromLocal = (m) => {
     const key = `${m.title}-${m.year}`;
     if (catalog.some(c => `${c.title}-${c.year}` === key)) { flash("Já no catálogo!", "warn"); return; }
-    setCatalog(prev => [{ ...m, id: Date.now(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
+    setCatalog(prev => [{ ...m, id: newId(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
     flash(`"${m.title}" adicionado!`);
   };
 
@@ -216,13 +222,13 @@ export default function App() {
     if (catalog.some(c => `${c.title}-${c.year}` === key)) { flash("Já no catálogo!", "warn"); return; }
     flash("Buscando detalhes...", "info");
     const enriched = await tmdb.enrichMovie(movie);
-    setCatalog(prev => [{ ...enriched, id: Date.now(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
+    setCatalog(prev => [{ ...enriched, id: newId(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
     flash(`"${enriched.title}" adicionado!`);
   };
 
   const addManual = () => {
     if (!manTitle.trim()) return;
-    setCatalog(prev => [{ id: Date.now(), title: manTitle.trim(), original_title: manTitle.trim(), year: manYear.trim(), director: manDirector.trim(), cast: [], genres: manGenres.trim() ? manGenres.split(",").map(g => g.trim()) : [], runtime: 0, rating: 0, overview: "", streaming: [], myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
+    setCatalog(prev => [{ id: newId(), title: manTitle.trim(), original_title: manTitle.trim(), year: manYear.trim(), director: manDirector.trim(), cast: [], genres: manGenres.trim() ? manGenres.split(",").map(g => g.trim()) : [], runtime: 0, rating: 0, overview: "", streaming: [], myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
     flash(`"${manTitle.trim()}" adicionado!`);
     setManTitle(""); setManYear(""); setManDirector(""); setManGenres(""); setShowManual(false);
   };
@@ -235,12 +241,13 @@ export default function App() {
   const remove = (id) => {
     const m = catalog.find(c => c.id === id);
     setCatalog(prev => prev.filter(c => c.id !== id));
+    setWatchlists(prev => prev.map(list => ({ ...list, movieIds: list.movieIds.filter(movieId => movieId !== id) })));
     setSelected(null); setView("main"); flash(`"${m?.title}" removido`, "warn");
   };
 
   const toggleTag = (id, tag) => {
     const m = catalog.find(c => c.id === id); if (!m) return;
-    update(id, { tags: m.tags.includes(tag) ? m.tags.filter(t => t !== tag) : [...m.tags, tag] });
+    update(id, { tags: (m.tags || []).includes(tag) ? m.tags.filter(t => t !== tag) : [...(m.tags || []), tag] });
   };
 
   // ─── STREAMING ───
@@ -283,20 +290,20 @@ export default function App() {
     if (!preview) return;
     const key = `${preview.title}-${preview.year}`;
     if (catalog.some(c => `${c.title}-${c.year}` === key)) { flash("Já no catálogo!", "warn"); return; }
-    setCatalog(prev => [{ ...preview, id: Date.now(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
+    setCatalog(prev => [{ ...preview, id: newId(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() }, ...prev]);
     flash(`"${preview.title}" adicionado!`);
   };
 
   // ─── WATCHLISTS ───
-  const createWatchlist = () => { if (!wlName.trim()) return; setWatchlists(prev => [{ id: Date.now(), name: wlName.trim(), desc: wlDesc.trim(), movieIds: [], createdAt: Date.now() }, ...prev]); setWlName(""); setWlDesc(""); setShowWlCreate(false); flash("Watchlist criada!"); };
+  const createWatchlist = () => { if (!wlName.trim()) return; setWatchlists(prev => [{ id: newId(), name: wlName.trim(), desc: wlDesc.trim(), movieIds: [], createdAt: Date.now() }, ...prev]); setWlName(""); setWlDesc(""); setShowWlCreate(false); flash("Watchlist criada!"); };
   const deleteWatchlist = (id) => { setWatchlists(prev => prev.filter(w => w.id !== id)); if (selWatchlist?.id === id) setSelWatchlist(null); flash("Removida", "warn"); };
   const addToWatchlist = (wlId, movieId) => { setWatchlists(prev => prev.map(w => w.id === wlId ? { ...w, movieIds: w.movieIds.includes(movieId) ? w.movieIds : [...w.movieIds, movieId] } : w)); setShowWlPicker(null); flash("Adicionado!"); };
   const removeFromWatchlist = (wlId, movieId) => { setWatchlists(prev => prev.map(w => w.id === wlId ? { ...w, movieIds: w.movieIds.filter(id => id !== movieId) } : w)); };
 
   // ─── CHECKLISTS ───
-  const createChecklist = () => { if (!clName.trim()) return; setChecklists(prev => [{ id: Date.now(), name: clName.trim(), items: [], createdAt: Date.now() }, ...prev]); setClName(""); setShowClCreate(false); flash("Lista criada!"); };
+  const createChecklist = () => { if (!clName.trim()) return; setChecklists(prev => [{ id: newId(), name: clName.trim(), items: [], createdAt: Date.now() }, ...prev]); setClName(""); setShowClCreate(false); flash("Lista criada!"); };
   const deleteChecklist = (id) => { setChecklists(prev => prev.filter(c => c.id !== id)); if (selChecklist?.id === id) setSelChecklist(null); flash("Removida", "warn"); };
-  const addChecklistItem = (clId) => { if (!clInput.trim()) return; setChecklists(prev => prev.map(c => c.id === clId ? { ...c, items: [...c.items, { id: Date.now(), text: clInput.trim(), done: false }] } : c)); setClInput(""); };
+  const addChecklistItem = (clId) => { if (!clInput.trim()) return; setChecklists(prev => prev.map(c => c.id === clId ? { ...c, items: [...c.items, { id: newId(), text: clInput.trim(), done: false }] } : c)); setClInput(""); };
   const toggleCheckItem = (clId, itemId) => { setChecklists(prev => prev.map(c => c.id === clId ? { ...c, items: c.items.map(i => i.id === itemId ? { ...i, done: !i.done } : i) } : c)); };
   const removeCheckItem = (clId, itemId) => { setChecklists(prev => prev.map(c => c.id === clId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c)); };
 
@@ -311,7 +318,7 @@ export default function App() {
     matched.forEach(m => {
       const key = `${m.title}-${m.year}`;
       if (!catalog.some(c => `${c.title}-${c.year}` === key) && !newMovies.some(n => `${n.title}-${n.year}` === key)) {
-        newMovies.push({ ...m, id: Date.now() + Math.random() * 1000, myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() });
+        newMovies.push({ ...m, id: newId(), myRating: 0, notes: "", tags: [], status: "quero_ver", addedAt: Date.now() });
       }
     });
     const updatedCatalog = [...newMovies, ...catalog];
@@ -322,7 +329,7 @@ export default function App() {
       const found = updatedCatalog.find(c => `${c.title}-${c.year}` === key);
       return found?.id;
     }).filter(Boolean);
-    setWatchlists(prev => [{ id: Date.now(), name: cw.name, desc: cw.desc, movieIds, createdAt: Date.now() }, ...prev]);
+    setWatchlists(prev => [{ id: newId(), name: cw.name, desc: cw.desc, movieIds, createdAt: Date.now() }, ...prev]);
     flash(`"${cw.name}" criada com ${movieIds.length} filmes!`);
   };
 
@@ -348,7 +355,7 @@ export default function App() {
   const TabBar = () => (
     <div style={{ display: "flex", gap: 6, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 12, flexWrap: "wrap" }}>
       {[["main", "Catálogo"], ["watchlists", "Watchlists"], ["checklists", "Listas"], ["stats", "Stats"], ["settings", "⚙"]].map(([v, l]) => (
-        <button key={v} onClick={() => { setView(v); resetView(); }}
+        <button key={v} aria-label={v === "settings" ? "Configurações" : undefined} onClick={() => { setView(v); resetView(); }}
           style={{ padding: "6px 14px 6px 2px", fontFamily: T.mono, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase", cursor: "pointer", border: "none", background: "transparent", color: view === v ? T.bone : T.muted, position: "relative", transition: "color .25s" }}>{l}{view === v && <span style={{ position: "absolute", right: 0, top: 4, color: T.gold, fontSize: 7 }}>●</span>}</button>
       ))}
     </div>
@@ -431,7 +438,9 @@ export default function App() {
   // DETAIL VIEW
   // ═══════════════════════════════════════════
   if (view === "detail" && selected) {
-    const m = catalog.find(c => c.id === selected.id) || selected;
+    const m = catalog.find(c => c.id === selected.id);
+    if (!m) return <div style={{ padding: 24 }}><TabBar /><p>O filme foi removido do catálogo.</p></div>;
+    const tmdbId = m.tmdb_id || m._rawTmdbId || (typeof m.id === "number" && m.id < 1e12 ? m.id : null);
     return (
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px", animation: "fadeUp .5s ease" }}>
         <button onClick={() => { setView("main"); setSelected(null); setEditing(false); setStreaming(null); setShowWlPicker(null); }}
@@ -460,8 +469,8 @@ export default function App() {
         <div style={{ marginTop: 28, padding: 18, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase" }}>Onde Assistir (Brasil)</span>
-            {m.streaming?.length > 0 ? null : !streaming && !streamLoading && m.id < 1e12 && (
-              <button onClick={() => loadStreaming(m.id)} style={{ background: T.gold + "22", border: `1px solid ${T.gold}44`, borderRadius: 6, color: T.gold, fontSize: 14, fontWeight: 600, padding: "5px 12px", cursor: "pointer" }}>Buscar no TMDb</button>
+            {m.streaming?.length > 0 ? null : !streaming && !streamLoading && tmdbId && (
+              <button onClick={() => loadStreaming(tmdbId)} style={{ background: T.gold + "22", border: `1px solid ${T.gold}44`, borderRadius: 6, color: T.gold, fontSize: 14, fontWeight: 600, padding: "5px 12px", cursor: "pointer" }}>Buscar no TMDb</button>
             )}
           </div>
           {/* Embedded streaming from DB */}
@@ -485,7 +494,7 @@ export default function App() {
               </div>
             ) : <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>{streaming.note || "Não encontrado"}</div>
           )}
-          {!m.streaming?.length && !streaming && !streamLoading && m.id >= 1e12 && <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>Adicionado manualmente — sem dados de streaming</div>}
+          {!m.streaming?.length && !streaming && !streamLoading && !tmdbId && <div style={{ fontSize: 16, color: T.dim, fontStyle: "italic" }}>Sem dados de streaming para este filme</div>}
         </div>
 
         {/* WATCHLIST PICKER */}
@@ -701,8 +710,44 @@ export default function App() {
     return (
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
         <h2 style={{ fontSize: 28, fontWeight: 300, color: T.gold, marginBottom: 28 }}>Configurações</h2>
+        {notif && <p role="status">{notif.msg}</p>}
+        <section className="sync-panel" aria-labelledby="sync-title">
+          <h3 id="sync-title">Sincronizar catálogo</h3>
+          <p role="status">{sync.message}</p>
+          {sync.configured && !sync.authenticated && (
+            <form onSubmit={async event => {
+              event.preventDefault();
+              if (await sync.login(password)) setPassword("");
+            }}>
+              <label htmlFor="sync-password">Senha do catálogo</label>
+              <input id="sync-password" type="password" autoComplete="current-password" value={password}
+                onChange={event => setPassword(event.target.value)} required style={IS} />
+              <button disabled={!password || ["loading", "syncing"].includes(sync.status)}>Conectar este navegador</button>
+            </form>
+          )}
+          {sync.conflict && (
+            <div>
+              <p>Escolha qual edição manter nos registros em conflito. As alterações nos demais serão combinadas.</p>
+              {sync.conflict.titles?.length > 0 && <p>{sync.conflict.titles.join(" · ")}</p>}
+              {["local", "remote"].map(choice => {
+                const data = sync.conflict[choice];
+                const label = choice === "local" ? "deste navegador" : sync.conflict.otherTab ? "da outra aba" : "da nuvem";
+                return <div key={choice}>
+                  <button onClick={() => handleExport(data, "-" + choice)}>Exportar cópia {label}</button>
+                  <button onClick={() => sync.resolveConflict(choice)}>Preferir edição {label} nos conflitos</button>
+                </div>;
+              })}
+            </div>
+          )}
+          {["pending", "error"].includes(sync.status) && <button onClick={sync.retry}>Tentar novamente</button>}
+          {sync.authenticated && <div>
+            <button onClick={() => sync.logout()}>Desconectar</button>
+            <small>A cópia local continua disponível neste navegador.</small>
+          </div>}
+        </section>
         <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20 }}>
           <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>TMDb API Key</div>
+          {cloudTmdb ? <p style={{ color: T.green }}>Busca do TMDb disponível com a chave do servidor.</p> : <>
           <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
             Com a chave do TMDb, a busca retorna filmes de todo o catálogo mundial com pôsteres, sinopses, elenco e dados de streaming atualizados. Sem ela, a busca usa apenas o banco local de {DB.length} filmes curados.
           </p>
@@ -710,20 +755,21 @@ export default function App() {
             Gratuita em <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" style={{ color: T.gold, textDecoration: "none" }}>themoviedb.org/settings/api</a>
           </p>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={keyInput} onChange={e => setKeyInput(e.target.value)} placeholder="Cole sua API key aqui..."
+            <input type="password" aria-label="Chave local do TMDb" value={keyInput} onChange={e => setKeyInput(e.target.value)} placeholder="Cole sua API key aqui..."
               style={{ ...IS, flex: 1, marginBottom: 0, fontFamily: "monospace", fontSize: 16 }} />
             <button onClick={() => { tmdb.setApiKey(keyInput.trim()); flash("API key salva!"); }}
               style={{ padding: "10px 20px", background: T.gold, border: "none", borderRadius: 8, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Salvar</button>
           </div>
-          {tmdb.hasApiKey() && <div style={{ marginTop: 10, fontSize: 15, color: T.green }}>✓ API key configurada</div>}
+          {tmdb.hasApiKey() && <div style={{ marginTop: 10, fontSize: 15, color: T.green }}>✓ API key configurada neste navegador</div>}
+          </>}
         </div>
         <div style={{ padding: 20, background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 20 }}>
-          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Backup & Sincronização</div>
+          <div style={{ fontSize: 15, color: T.dim, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Backup em arquivo</div>
           <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
-            Exporte um arquivo JSON com seu catálogo, watchlists, listas e API key. Importe em outro dispositivo (ex: iPhone) para migrar tudo de uma vez.
+            O arquivo JSON inclui os filmes, as notas e as listas. Você também pode restaurar um backup de uma versão anterior.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={handleExport}
+            <button onClick={() => handleExport({ catalog, watchlists, checklists })}
               style={{ padding: "10px 20px", background: T.gold, border: "none", borderRadius: 8, color: T.bg, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Exportar JSON</button>
             <button onClick={() => fileInputRef.current?.click()}
               style={{ padding: "10px 20px", background: "transparent", border: `1px solid ${T.gold}66`, borderRadius: 8, color: T.gold, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Importar JSON</button>
@@ -787,6 +833,12 @@ export default function App() {
       </div>
       <TabBar />
 
+      {(sync.storageWarning || ["conflict", "error", "pending"].includes(sync.status) || (sync.configured && !sync.authenticated)) && (
+        <button className="sync-notice" onClick={() => setView("settings")}>
+          {sync.storageWarning || (sync.status === "conflict" ? "Revisar conflito de sincronização" :
+            sync.status === "pending" || sync.status === "error" ? sync.message : "Conectar ao meu catálogo")}
+        </button>
+      )}
       {/* SEARCH */}
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -804,7 +856,7 @@ export default function App() {
             )}
           </div>
           {searchMode === "tmdb" && (
-            <button onClick={doTmdbSearch} disabled={loading || !query.trim()}
+            <button onClick={() => doTmdbSearch()} disabled={loading || !query.trim()}
               style={{ padding: "13px 22px", background: loading ? T.surface : T.gold, border: "none", borderRadius: 10, color: loading ? T.muted : T.bg, fontWeight: 700, fontSize: 17, cursor: loading ? "wait" : "pointer", opacity: !query.trim() ? .5 : 1, whiteSpace: "nowrap" }}>
               {loading ? "..." : "Buscar"}
             </button>
@@ -813,7 +865,7 @@ export default function App() {
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 4 }}>
             <Btn active={searchMode === "local"} onClick={() => { setSearchMode("local"); setTmdbResults([]); setSearchError(""); if (query.length >= 2) doLocalSearch(query); }}>Local ({DB.length})</Btn>
-            <Btn active={searchMode === "tmdb"} color={tmdb.hasApiKey() ? T.gold : T.dim} onClick={() => { setSearchMode("tmdb"); setLocalResults([]); }}>TMDb {tmdb.hasApiKey() ? "✓" : "🔑"}</Btn>
+            <Btn active={searchMode === "tmdb"} color={tmdbAvailable ? T.gold : T.dim} onClick={() => { setSearchMode("tmdb"); setLocalResults([]); }}>TMDb {tmdbAvailable ? "✓" : "🔑"}</Btn>
           </div>
           <button onClick={() => setShowManual(!showManual)} style={{ background: "none", border: "none", color: T.muted, fontSize: 15, cursor: "pointer", textDecoration: "underline", padding: 0 }}>{showManual ? "Fechar" : "+ Manual"}</button>
           {searchMode === "local" && <button onClick={() => { setShowAllLocal(!showAllLocal); setLocalResults(showAllLocal ? [] : DB); setQuery(""); }} style={{ background: "none", border: "none", color: T.gold, fontSize: 15, cursor: "pointer", textDecoration: "underline", padding: 0 }}>{showAllLocal ? "Fechar catálogo" : `Ver todos (${DB.length})`}</button>}
@@ -898,7 +950,7 @@ export default function App() {
         <div style={{ textAlign: "center", padding: "60px 20px", color: T.dim }}><div style={{ fontSize: 44, marginBottom: 12, opacity: .3 }}>🎬</div><div style={{ fontSize: 18, color: T.muted }}>Catálogo vazio</div><div style={{ fontSize: 16, marginTop: 6 }}>Busque ou adicione manualmente</div></div>
         : <>
           {/* Fetch posters button */}
-          {tmdb.hasApiKey() && catalog.some(m => !m.poster_path) && (
+          {tmdbAvailable && catalog.some(m => !m.poster_path) && (
             <div style={{ marginTop: 8, marginBottom: 12 }}>
               <button onClick={async () => {
                 flash("Buscando pôsteres...", "info");

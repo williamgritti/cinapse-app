@@ -1,8 +1,17 @@
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const IMG_BASE = "https://image.tmdb.org/t/p";
 
-// API key is read from env or entered by user
-let apiKey = localStorage.getItem("cinapse-tmdb-key") || "";
+let cloudEnabled = false;
+let apiKey = "";
+try {
+  apiKey = localStorage.getItem("cinapse-tmdb-key") || "";
+} catch {
+  // The server proxy also works when browser storage is unavailable.
+}
+
+export function setCloudEnabled(enabled) {
+  cloudEnabled = enabled;
+}
 
 export function setApiKey(key) {
   apiKey = key;
@@ -14,7 +23,7 @@ export function getApiKey() {
 }
 
 export function hasApiKey() {
-  return !!apiKey;
+  return cloudEnabled || !!apiKey;
 }
 
 export function posterUrl(path, size = "w342") {
@@ -27,22 +36,33 @@ export function backdropUrl(path) {
   return `${IMG_BASE}/w1280${path}`;
 }
 
-export async function searchMovies(query) {
-  if (!apiKey) throw new Error("API key não configurada");
-  const res = await fetch(
-    `${TMDB_BASE}/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=pt-BR&page=1`
-  );
+export async function searchMovies(query, year) {
+  if (!hasApiKey()) throw new Error("API key não configurada");
+  const params = new URLSearchParams({ query });
+  if (year) params.set("year", year);
+  let path = "/api/tmdb";
+  if (!cloudEnabled) {
+    path = `${TMDB_BASE}/search/movie`;
+    params.set("api_key", apiKey);
+    params.set("language", "pt-BR");
+    params.set("page", "1");
+  }
+  const res = await fetch(`${path}?${params}`);
+  if (cloudEnabled && res.status === 401) throw new Error("Entre novamente para buscar no TMDb.");
   if (!res.ok) throw new Error(`TMDb API: ${res.status}`);
   const data = await res.json();
   return (data.results || []).slice(0, 12);
 }
 
 export async function getMovieDetails(id) {
-  if (!apiKey) return null;
+  if (!hasApiKey() || !id) return null;
   try {
-    const res = await fetch(
-      `${TMDB_BASE}/movie/${id}?api_key=${apiKey}&language=pt-BR&append_to_response=credits,watch/providers`
-    );
+    const url = cloudEnabled
+      ? `/api/tmdb?id=${encodeURIComponent(id)}`
+      : `${TMDB_BASE}/movie/${encodeURIComponent(id)}?${new URLSearchParams({
+        api_key: apiKey, language: "pt-BR", append_to_response: "credits,watch/providers",
+      })}`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -84,6 +104,7 @@ export async function enrichMovie(movie) {
   const details = await getMovieDetails(movie.id);
   return {
     id: movie.id,
+    tmdb_id: movie.id,
     title: movie.title || details?.title,
     original_title: movie.original_title || details?.original_title,
     year: (movie.release_date || details?.release_date || "").slice(0, 4),
@@ -101,16 +122,9 @@ export async function enrichMovie(movie) {
 
 // Search TMDb for a poster path by title + year
 export async function fetchPosterPath(title, year) {
-  if (!apiKey) return null;
+  if (!hasApiKey()) return null;
   try {
-    const q = encodeURIComponent(title);
-    const url = year
-      ? `${TMDB_BASE}/search/movie?api_key=${apiKey}&query=${q}&year=${year}&language=pt-BR&page=1`
-      : `${TMDB_BASE}/search/movie?api_key=${apiKey}&query=${q}&language=pt-BR&page=1`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const match = data.results?.[0];
+    const [match] = await searchMovies(title, year);
     return match ? { poster_path: match.poster_path, tmdb_id: match.id } : null;
   } catch {
     return null;
@@ -119,7 +133,7 @@ export async function fetchPosterPath(title, year) {
 
 // Batch fetch posters for movies missing them (with rate limiting)
 export async function fetchMissingPosters(movies, onUpdate) {
-  if (!apiKey) return;
+  if (!hasApiKey()) return;
   const missing = movies.filter(m => !m.poster_path);
   for (let i = 0; i < missing.length; i++) {
     const m = missing[i];
