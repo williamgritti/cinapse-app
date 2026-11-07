@@ -2,7 +2,7 @@
 
 O Cinapse combina uma base curada distribuída com o app, busca no TMDb e cadastro manual. Os filmes que você adiciona formam um catálogo pessoal com notas, avaliações, status, watchlists e checklists.
 
-Além do catálogo, você pode consultar onde assistir no Brasil, criar watchlists temáticas, marcar filmes vistos em checklists e acompanhar estatísticas de gêneros, diretores e avaliações.
+Além do catálogo, você pode consultar onde assistir no Brasil, criar watchlists temáticas e marcar filmes em checklists. A aba Estatísticas lê só o seu catálogo: totais por status, horas dos filmes assistidos, assistidos por mês (pela data em que entraram no catálogo, que é a data disponível) e notas médias por gênero e diretor.
 
 ## Usar o mesmo catálogo no Mac e no iPhone
 
