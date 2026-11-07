@@ -6,7 +6,7 @@
 // O script:
 //   1. Lê src/db.js e extrai title+year das entradas existentes (dedup)
 //   2. Pra cada título da lista abaixo, busca no TMDb em pt-BR
-//   3. Monta a entrada no formato exato do db.js
+//   3. Monta a entrada no formato exato do db.js, com poster_path e tmdb_id
 //   4. Anexa as novas entradas antes do fechamento do array
 //   5. Pula títulos já presentes ou não encontrados
 //
@@ -153,6 +153,8 @@ function buildEntry(details) {
     title: details.title || details.original_title || "",
     original_title: details.original_title || details.title || "",
     year,
+    tmdb_id: details.id,
+    poster_path: details.poster_path || null,
     director,
     genres,
     runtime: details.runtime || 0,
@@ -171,7 +173,12 @@ function jsArrayOfStrings(arr) {
   return `[${(arr || []).map(jsString).join(",")}]`;
 }
 
+function formatPoster(posterPath) {
+  return posterPath ? jsString(posterPath) : "null";
+}
+
 function formatEntry(e) {
+  const tmdbId = Number.isInteger(e.tmdb_id) ? e.tmdb_id : "null";
   return (
     `  {title:${jsString(e.title)},` +
     `original_title:${jsString(e.original_title)},` +
@@ -182,7 +189,9 @@ function formatEntry(e) {
     `rating:${e.rating},` +
     `overview:${jsString(e.overview)},` +
     `cast:${jsArrayOfStrings(e.cast)},` +
-    `streaming:[]},`
+    `streaming:[],` +
+    `poster_path:${formatPoster(e.poster_path)},` +
+    `tmdb_id:${tmdbId}},`
   );
 }
 

@@ -69,6 +69,48 @@ function Poster({ path, size = 150 }) {
   return <img src={tmdb.posterUrl(path)} alt="" style={{ width: size, height: size * 1.5, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} onError={e => { e.target.style.display = "none"; }} />;
 }
 
+const localPosterCache = new Map();
+const localPosterInflight = new Set();
+const localPosterListeners = new Set();
+
+function notifyLocalPosters() {
+  for (const listener of localPosterListeners) listener();
+}
+
+function localPosterKey(movie) {
+  return `${movie.title}\0${movie.year}`;
+}
+
+function movieWithCachedPoster(movie) {
+  if (!movie || movie.poster_path) return movie;
+  const cached = localPosterCache.get(localPosterKey(movie));
+  if (!cached?.poster_path) return movie;
+  return { ...movie, poster_path: cached.poster_path, tmdb_id: movie.tmdb_id ?? cached.tmdb_id };
+}
+
+function useLocalPosterRevision() {
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const listener = () => setRevision(n => n + 1);
+    localPosterListeners.add(listener);
+    return () => localPosterListeners.delete(listener);
+  }, []);
+  return revision;
+}
+
+function LocalResultThumb({ movie, revision }) {
+  void revision;
+  if (movie.poster_path) {
+    return <img src={tmdb.posterUrl(movie.poster_path, "w92")} alt="" style={{ width: 46, height: 69, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={e => e.target.style.display = "none"} />;
+  }
+  const loading = localPosterInflight.has(localPosterKey(movie));
+  return (
+    <div aria-hidden="true" title={loading ? "Buscando pôster" : "Sem pôster"} style={{ width: 46, height: 69, borderRadius: 6, flexShrink: 0, boxSizing: "border-box", background: T.surface, border: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, opacity: loading ? .7 : .35 }}>
+      🎬
+    </div>
+  );
+}
+
 function Spinner({ text }) {
   return (
     <div style={{ textAlign: "center", padding: 36 }}>
@@ -130,6 +172,31 @@ export default function App() {
     tmdb.setCloudEnabled(cloudTmdb);
     return () => tmdb.setCloudEnabled(false);
   }, [cloudTmdb]);
+
+  const posterRevision = useLocalPosterRevision();
+
+  useEffect(() => {
+    if (searchMode !== "local" || !tmdb.hasApiKey()) return undefined;
+    if (localResults.some(movie => movie && localPosterCache.has(localPosterKey(movie)))) notifyLocalPosters();
+    const missing = localResults.filter(movie => movie && !movie.poster_path && !localPosterCache.has(localPosterKey(movie)) && !localPosterInflight.has(localPosterKey(movie)));
+    if (!missing.length) return undefined;
+    for (const movie of missing) localPosterInflight.add(localPosterKey(movie));
+    notifyLocalPosters();
+    const batch = missing.map(movie => ({ ...movie, id: localPosterKey(movie) }));
+    tmdb.fetchMissingPosters(batch, (id, data) => {
+      localPosterCache.set(id, { poster_path: data.poster_path, tmdb_id: data.tmdb_id });
+      localPosterInflight.delete(id);
+      notifyLocalPosters();
+    }).finally(() => {
+      for (const movie of missing) {
+        const key = localPosterKey(movie);
+        localPosterInflight.delete(key);
+        if (!localPosterCache.has(key)) localPosterCache.set(key, null);
+      }
+      notifyLocalPosters();
+    });
+    return undefined;
+  }, [searchMode, localResults, tmdbAvailable]);
 
   const flash = (msg, type = "ok") => { setNotif({ msg, type }); setTimeout(() => setNotif(null), 2500); };
 
@@ -897,11 +964,13 @@ export default function App() {
             ))}
           </div>}
         </div>
-        {localResults.map((m, i) => {
+        {localResults.map((entry, i) => {
+          const m = movieWithCachedPoster(entry);
           const inCat = catalog.some(c => c.title === m.title && c.year === m.year);
           return <div key={i} onClick={() => previewLocal(m)} style={{ display: "flex", gap: 16, padding: "12px 16px", background: T.card, border: `1px solid ${inCat ? T.gold + "44" : T.border}`, borderRadius: 10, marginBottom: 8, animation: `fadeUp .35s ease ${i * .05}s both`, alignItems: "center", cursor: "pointer", transition: "all .2s" }}
               onMouseEnter={e => { e.currentTarget.style.transform = "translateX(4px)"; e.currentTarget.style.borderColor = T.gold + "66"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = inCat ? T.gold + "44" : T.border; }}>
+            <LocalResultThumb movie={m} revision={posterRevision} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 600 }}>{m.title} <span style={{ fontWeight: 300, color: T.dim }}>({m.year})</span></div>
               <div style={{ fontSize: 15, color: T.muted, marginTop: 3 }}>{m.director && <span style={{ color: T.gold }}>{m.director}</span>}{m.runtime > 0 && <span> · {m.runtime}min</span>}{m.rating > 0 && <span> · ★{Number(m.rating).toFixed(1)}</span>}</div>
