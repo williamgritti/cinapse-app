@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "populate-db": "node scripts/populate-db.js",
+    "backfill-posters": "node scripts/backfill-posters.js",
     "test": "node --test"
   },
   "dependencies": {
