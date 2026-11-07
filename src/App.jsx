@@ -4,6 +4,7 @@ import * as tmdb from "./tmdb";
 import { useCatalogSync } from "./useCatalogSync";
 import { isCatalogData } from "../shared/catalog";
 import MarketingPlan from "./MarketingPlan";
+import StatsView from "./StatsView";
 
 const T = {
   bg: "#0a0a0b", surface: "#121116", card: "#16151b", border: "#23222a",
@@ -407,21 +408,13 @@ export default function App() {
     .sort((a, b) => sortBy === "added" ? b.addedAt - a.addedAt : sortBy === "rating" ? (b.myRating || 0) - (a.myRating || 0) : sortBy === "year" ? (parseInt(b.year) || 0) - (parseInt(a.year) || 0) : (a.title || "").localeCompare(b.title || ""));
 
   const allTags = [...new Set(catalog.flatMap(m => m.tags || []))];
-  const stats = {
-    total: catalog.length,
-    watched: catalog.filter(m => m.status === "assistido").length,
-    want: catalog.filter(m => m.status === "quero_ver").length,
-    avg: catalog.filter(m => m.myRating > 0).length ? (catalog.filter(m => m.myRating > 0).reduce((s, m) => s + m.myRating, 0) / catalog.filter(m => m.myRating > 0).length).toFixed(1) : "—",
-    genres: Object.entries(catalog.reduce((a, m) => { (m.genres || []).forEach(g => a[g] = (a[g] || 0) + 1); return a; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5),
-    directors: Object.entries(catalog.filter(m => m.director).reduce((a, m) => { a[m.director] = (a[m.director] || 0) + 1; return a; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5),
-  };
 
   const resetView = () => { setSelected(null); setSelWatchlist(null); setSelChecklist(null); setLocalResults([]); setTmdbResults([]); setQuery(""); setSearchError(""); setStreaming(null); setShowWlPicker(null); setPreview(null); setPreviewLoading(false); setShowAllLocal(false); setLocalSort("title"); };
 
   // ─── TAB BAR ───
   const TabBar = () => (
     <div style={{ display: "flex", gap: 6, marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 12, flexWrap: "wrap" }}>
-      {[["main", "Catálogo"], ["watchlists", "Watchlists"], ["checklists", "Listas"], ["stats", "Stats"], ["settings", "⚙"]].map(([v, l]) => (
+      {[["main", "Catálogo"], ["watchlists", "Watchlists"], ["checklists", "Listas"], ["stats", "Estatísticas"], ["settings", "⚙"]].map(([v, l]) => (
         <button key={v} aria-label={v === "settings" ? "Configurações" : undefined} onClick={() => { setView(v); resetView(); }}
           style={{ padding: "6px 14px 6px 2px", fontFamily: T.mono, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase", cursor: "pointer", border: "none", background: "transparent", color: view === v ? T.bone : T.muted, position: "relative", transition: "color .25s" }}>{l}{view === v && <span style={{ position: "absolute", right: 0, top: 4, color: T.gold, fontSize: 7 }}>●</span>}</button>
       ))}
@@ -748,24 +741,7 @@ export default function App() {
   if (view === "stats") {
     return (
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 20px" }}><TabBar />
-        <h2 style={{ fontSize: 28, fontWeight: 300, color: T.gold, marginBottom: 28 }}>Estatísticas</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 36 }}>
-          {[["Total", stats.total, T.text], ["Assistidos", stats.watched, T.green], ["Quero Ver", stats.want, T.blue], ["Nota Média", stats.avg, T.gold]].map(([l, v, c]) => (
-            <div key={l} style={{ background: T.surface, borderRadius: 12, padding: 18, textAlign: "center", border: `1px solid ${T.border}` }}>
-              <div style={{ fontSize: 32, fontWeight: 300, color: c }}>{v}</div>
-              <div style={{ fontSize: 13, color: T.muted, letterSpacing: ".15em", textTransform: "uppercase", marginTop: 6 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-        {stats.genres.length > 0 && <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 16, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 12 }}>Top Gêneros</div>
-          {stats.genres.map(([g, n]) => <div key={g} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}><div style={{ width: 110, fontSize: 16, color: T.muted, textAlign: "right" }}>{g}</div><div style={{ flex: 1, height: 6, background: T.surface, borderRadius: 3, overflow: "hidden" }}><div style={{ width: `${(n / stats.genres[0][1]) * 100}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.goldDim})`, borderRadius: 3, transition: "width .8s" }} /></div><div style={{ fontSize: 16, color: T.muted, width: 24 }}>{n}</div></div>)}
-        </div>}
-        {stats.directors.length > 0 && <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 16, color: T.dim, letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 12 }}>Top Diretores</div>
-          {stats.directors.map(([d, n]) => <div key={d} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.border}22`, fontSize: 17 }}><span>{d}</span><span style={{ color: T.gold }}>{n}</span></div>)}
-        </div>}
-        {catalog.length === 0 && <div style={{ textAlign: "center", color: T.dim, marginTop: 60 }}>Adicione filmes para ver estatísticas.</div>}
+        <StatsView catalog={catalog} />
       </div>
     );
   }
