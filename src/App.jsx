@@ -999,8 +999,13 @@ export default function App() {
             <div style={{ marginTop: 8, marginBottom: 12 }}>
               <button onClick={async () => {
                 flash("Buscando pôsteres...", "info");
-                await tmdb.fetchMissingPosters(catalog, (id, data) => update(id, data));
-                flash("Pôsteres atualizados!");
+                try {
+                  const outcome = await tmdb.fetchMissingPosters(catalog, (id, data) => update(id, data));
+                  const problem = outcome.errors.length || outcome.missed.length;
+                  flash(tmdb.posterFetchMessage(outcome), problem ? "warn" : "ok");
+                } catch (error) {
+                  flash(error?.message || "Falha ao buscar pôsteres.", "warn");
+                }
               }} style={{ background: T.gold + "18", border: `1px solid ${T.gold}44`, borderRadius: 6, color: T.gold, fontSize: 14, fontWeight: 600, padding: "6px 14px", cursor: "pointer", transition: "all .25s" }}>
                 🖼 Buscar pôsteres ({catalog.filter(m => !m.poster_path).length} sem capa)
               </button>

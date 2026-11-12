@@ -66,3 +66,85 @@ test("sessão expirada não tenta a chave local como fallback", async t => {
   await assert.rejects(tmdb.searchMovies("A & B"), /Entre novamente/);
   assert.equal(fetch.mock.callCount(), 1);
 });
+
+test("Audição acha o pôster de Ôdishon mesmo com título em português e ano a um de distância", async t => {
+  const audition = {
+    id: 11075,
+    title: "O Teste Decisivo",
+    original_title: "オーディション",
+    release_date: "2000-03-03",
+    poster_path: "/zwGaUMm0wAqi0wkO7LJDlwoA5LP.jpg",
+  };
+  const decoy = {
+    id: 888,
+    title: "Outra Coisa",
+    original_title: "Odishon Fake",
+    release_date: "2000-01-01",
+    poster_path: "/errado.jpg",
+  };
+  const pink = {
+    id: 999,
+    title: "Honban ôdishon",
+    original_title: "本番オーディション",
+    release_date: "2009-01-30",
+    poster_path: "/pink.jpg",
+  };
+  t.mock.method(globalThis, "fetch", async path => {
+    const url = new URL(path, "https://cinapse.local");
+    const id = url.searchParams.get("id");
+    if (id === "11075") {
+      return Response.json({
+        id: 11075,
+        poster_path: audition.poster_path,
+        credits: { crew: [{ job: "Director", name: "Takashi Miike" }] },
+      });
+    }
+    if (id === "888") {
+      return Response.json({
+        id: 888,
+        poster_path: decoy.poster_path,
+        credits: { crew: [{ job: "Director", name: "Outra Pessoa" }] },
+      });
+    }
+    const query = url.searchParams.get("query");
+    const year = url.searchParams.get("year");
+    let results = [];
+    if (query === "Audição" || query === "audicao") {
+      results = [
+        { id: 1, title: "Audição", original_title: "Audição", release_date: "2023-03-02", poster_path: "/2023.jpg" },
+        { id: 2, title: "A Audição", original_title: "A Audição", release_date: "2002-01-01", poster_path: "/2002.jpg" },
+      ];
+    } else if (query === "Ôdishon" || query === "odishon") {
+      results = [decoy, pink, audition];
+    }
+    if (year) results = results.filter(movie => (movie.release_date || "").startsWith(year));
+    return Response.json({ results });
+  });
+  tmdb.setCloudEnabled(true);
+  const poster = await tmdb.fetchPosterPath("Audição", "1999", {
+    originalTitle: "Ôdishon",
+    director: "Takashi Miike",
+  });
+  assert.deepEqual(poster, {
+    poster_path: "/zwGaUMm0wAqi0wkO7LJDlwoA5LP.jpg",
+    tmdb_id: 11075,
+  });
+});
+
+test("busca em lote avisa quando o TMDb falha ou não acha o filme", async t => {
+  t.mock.method(globalThis, "fetch", async () => new Response(null, { status: 502 }));
+  tmdb.setCloudEnabled(true);
+  const failed = await tmdb.fetchMissingPosters(
+    [{ id: "audicao", title: "Audição", original_title: "Ôdishon", year: "1999", director: "Takashi Miike" }],
+    () => { throw new Error("não deveria gravar"); },
+  );
+  assert.match(tmdb.posterFetchMessage(failed), /TMDb API: 502/);
+
+  t.mock.method(globalThis, "fetch", async () => Response.json({ results: [] }));
+  const missed = await tmdb.fetchMissingPosters(
+    [{ id: "nada", title: "Nada Disso", year: "1991" }],
+    () => { throw new Error("não deveria gravar"); },
+  );
+  assert.deepEqual(missed.missed, [{ title: "Nada Disso", year: "1991" }]);
+  assert.match(tmdb.posterFetchMessage(missed), /Não encontrei pôster para Nada Disso \(1991\)/);
+});
